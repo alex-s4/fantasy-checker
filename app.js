@@ -51,7 +51,23 @@ window.onload = function () {
         document.querySelector(btnContId).style.display = 'block';
     }
 
-    /** Toggle a section's visibility when its header is clicked. */
+    /** Build breakdown header line from name + optional period label.
+     *  - With period:  "LeBron James - 1Q FS" or "1Q FS" (no name)
+     *  - Without:      "LeBron James FS"        or ""     (no name, no period)
+     */
+    function buildHeader(name, period) {
+        const n = (name || '').trim();
+        const p = period || '';
+        if (n && p)  return `${n} - ${p} FS`;
+        if (n)       return `${n} FS`;
+        if (p)       return `${p} FS`;
+        return '';
+    }
+
+    /** Prepend header to a breakdown string if header is non-empty. */
+    function withHeader(header, breakdown) {
+        return header ? `${header}\n${breakdown}` : breakdown;
+    }
     function toggleSection(contentSelector) {
         const el = document.querySelector(contentSelector);
         el.style.display = (el.style.display === 'block') ? 'none' : 'block';
@@ -70,20 +86,19 @@ window.onload = function () {
      * Wire up the "Hide zero stats" checkbox.
      * Must be called inside the Go-button handler (after statLines + total are known).
      */
-    function setupHideZerosCheckbox(checkbox, textareaId, statLines, inputs, total, trailText = '') {
-        // Clone to remove any previously-attached listener, then re-attach fresh.
+    function setupHideZerosCheckbox(checkbox, textareaId, statLines, inputs, total, trailText = '', header = '') {
         const fresh = checkbox.cloneNode(true);
         checkbox.parentNode.replaceChild(fresh, checkbox);
         fresh.checked = false;
 
         fresh.addEventListener('click', () => {
-            const text = fresh.checked
+            const body = fresh.checked
                 ? buildBreakdownHideZeros(statLines, inputs, total, trailText)
                 : buildBreakdown(statLines, total, trailText);
-            document.querySelector(textareaId).innerHTML = text;
+            document.querySelector(textareaId).innerHTML = withHeader(header, body);
         });
 
-        return fresh; // return so the caller can keep a reference if needed
+        return fresh;
     }
 
     /** Get the checked radio value from a NodeList; returns 0 if none checked. */
@@ -147,13 +162,19 @@ window.onload = function () {
             `Turnover: -1 pt (${bballTo.value}) = ${toVal}`,
         ];
 
-        showBreakdown('#bball-breakdown', '#bball-textarea-btn-cont', buildBreakdown(statLines, total));
-        bballHzsChk = setupHideZerosCheckbox(bballHzsChk, '#bball-breakdown', statLines, bballInputs, total);
+        const bballHeader = buildHeader(
+            document.getElementById('bball-player-name').value,
+            document.querySelector('input[name="bball-period"]:checked')?.value
+        );
+        const bballBreakdown = withHeader(bballHeader, buildBreakdown(statLines, total));
+        showBreakdown('#bball-breakdown', '#bball-textarea-btn-cont', bballBreakdown);
+        bballHzsChk = setupHideZerosCheckbox(bballHzsChk, '#bball-breakdown', statLines, bballInputs, total, '', bballHeader);
     });
 
     bballClearBtn.addEventListener('click', () => {
         bballInputs.forEach(i => i.value = '');
         bballVals.forEach(v => v.innerHTML = '');
+        document.getElementById('bball-player-name').value = '';
         bballTotalEl.innerHTML = '';
         document.querySelector('#bball-breakdown').innerHTML = '';
         document.querySelector('#bball-textarea-btn-cont').style.display = 'none';
@@ -222,14 +243,17 @@ window.onload = function () {
             `Out: 1 pt (${outPts}) = ${outPts}`,
         ];
 
-        showBreakdown('#bsballp-breakdown', '#bsballp-textarea-btn-cont', buildBreakdown(statLines, total));
-        bsballpHzsChk = setupHideZerosCheckbox(bsballpHzsChk, '#bsballp-breakdown', statLines, bsballpInputs, total);
+        const bsballpHeader   = buildHeader(document.getElementById('bsballp-player-name').value);
+        const bsballpBreakdown = withHeader(bsballpHeader, buildBreakdown(statLines, total));
+        showBreakdown('#bsballp-breakdown', '#bsballp-textarea-btn-cont', bsballpBreakdown);
+        bsballpHzsChk = setupHideZerosCheckbox(bsballpHzsChk, '#bsballp-breakdown', statLines, bsballpInputs, total, '', bsballpHeader);
     });
 
     bsballpClearBtn.addEventListener('click', () => {
         bsballpInputs.forEach(i => i.value = '');
         bsballpVals.forEach(v => v.innerHTML = '');
         bsballpWinChk.checked = false;
+        document.getElementById('bsballp-player-name').value = '';
         bsballpTotalEl.innerHTML = '';
         document.querySelector('#bsballp-breakdown').innerHTML = '';
         document.querySelector('#bsballp-textarea-btn-cont').style.display = 'none';
@@ -302,13 +326,16 @@ window.onload = function () {
             `Stolen Base: 5 pts (${bsballhSB.value}) = ${sbVal}`,
         ];
 
-        showBreakdown('#bsballh-breakdown', '#bsballh-textarea-btn-cont', buildBreakdown(statLines, total));
-        bsballhHzsChk = setupHideZerosCheckbox(bsballhHzsChk, '#bsballh-breakdown', statLines, bsballhInputs, total);
+        const bsballhHeader   = buildHeader(document.getElementById('bsballh-player-name').value);
+        const bsballhBreakdown = withHeader(bsballhHeader, buildBreakdown(statLines, total));
+        showBreakdown('#bsballh-breakdown', '#bsballh-textarea-btn-cont', bsballhBreakdown);
+        bsballhHzsChk = setupHideZerosCheckbox(bsballhHzsChk, '#bsballh-breakdown', statLines, bsballhInputs, total, '', bsballhHeader);
     });
 
     bsballhClearBtn.addEventListener('click', () => {
         bsballhInputs.forEach(i => i.value = '');
         bsballhVals.forEach(v => v.innerHTML = '');
+        document.getElementById('bsballh-player-name').value = '';
         bsballhTotalEl.innerHTML = '';
         document.querySelector('#bsballh-breakdown').innerHTML = '';
         document.querySelector('#bsballh-textarea-btn-cont').style.display = 'none';
@@ -345,12 +372,20 @@ window.onload = function () {
     const playerSets   = [1, 2, 3, 4, 5].map(n => document.querySelector(`#tennis-box-player-s${n}`));
     const opponentSets = [1, 2, 3, 4, 5].map(n => document.querySelector(`#tennis-box-opponent-s${n}`));
 
-    // Retirement controls (WIP)
-    const retirementChk       = document.querySelector('#tennis-bs-retirement');
+    // Retirement controls
+    const retirementChk       = document.querySelector('#tennis-bs-retirement'); // legacy shim
+    const oppRetiredChk       = document.querySelector('#tennis-opp-retired');
+    const playerRetiredChk    = document.querySelector('#tennis-player-retired');
     const playerRetiredRadio  = document.querySelector('#tennis-bs-p-retired');
     const opponentRetiredRadio= document.querySelector('#tennis-bs-o-retired');
 
-    // Retirement checkbox — no extra init needed; logic runs inside Go handler
+    // Mutual exclusion — checking one unchecks the other
+    oppRetiredChk.addEventListener('change', () => {
+        if (oppRetiredChk.checked) playerRetiredChk.checked = false;
+    });
+    playerRetiredChk.addEventListener('change', () => {
+        if (playerRetiredChk.checked) oppRetiredChk.checked = false;
+    });
 
     tennisGoBtn.addEventListener('click', () => {
 
@@ -359,69 +394,62 @@ window.onload = function () {
 
         // ── Retirement logic ──────────────────────────────────────────
         // Rule: only applies if Set 1 is fully complete.
-        // Fill the in-progress set to the winning score for the player,
-        // then keep filling 6-0 until the player reaches setsToWin.
+        // The retiring player's opponent gets filled as the winner.
         // Ace / Double Fault are never touched here.
 
-        const retirementChecked = retirementChk.checked;
-        const format     = Number(document.querySelector('input[name="tennis-format"]:checked')?.value || 3);
-        const setsToWin  = Math.ceil(format / 2); // 2 for BO3, 3 for BO5
+        const oppRetired    = oppRetiredChk.checked;
+        const playerRetired = playerRetiredChk.checked;
+        const retirementChecked = oppRetired || playerRetired;
+
+        const format    = Number(document.querySelector('input[name="tennis-format"]:checked')?.value || 3);
+        const setsToWin = Math.ceil(format / 2); // 2 for BO3, 3 for BO5
 
         /** True if a set score pair represents a completed set. */
-        function setComplete(p, o) {
-            return p >= 6 || o >= 6;
-        }
+        function setComplete(p, o) { return p >= 6 || o >= 6; }
+
+        /** 6 normally; 7 if the in-progress set is already at 5-5 or beyond. */
+        function winningScore(w, l) { return (w >= 5 && l >= 5) ? 7 : 6; }
 
         /**
-         * Winning game count for the in-progress set:
-         * 6 normally, 7 if it's already at 5-5 or beyond.
+         * Fill sets for the winning side after a retirement.
+         * winnerScores / loserScores are the raw arrays, mutated in place.
          */
-        function winningScore(playerGames, oppGames) {
-            return (playerGames >= 5 && oppGames >= 5) ? 7 : 6;
-        }
+        function applyRetirement(winnerScores, loserScores) {
+            if (!setComplete(winnerScores[0], loserScores[0])) return; // Set 1 must be done
 
-        if (retirementChecked && setComplete(pScores[0], oScores[0])) {
-
-            // Step 1 — find the first incomplete set and fill it
+            // Step 1 — find and fill the first incomplete set
             let retiredAtSet = -1;
             for (let i = 0; i < format; i++) {
-                if (!setComplete(pScores[i], oScores[i])) {
-                    retiredAtSet = i;
-                    break;
-                }
+                if (!setComplete(winnerScores[i], loserScores[i])) { retiredAtSet = i; break; }
             }
-
             if (retiredAtSet !== -1) {
-                pScores[retiredAtSet] = winningScore(pScores[retiredAtSet], oScores[retiredAtSet]);
-                // opponent score stays as-is (actual games played in that set)
+                winnerScores[retiredAtSet] = winningScore(winnerScores[retiredAtSet], loserScores[retiredAtSet]);
             }
 
-            // Step 2 — count player's set wins so far
-            let playerSetWins = 0;
+            // Step 2 — count winner's set wins after that fill
+            let winnerSetWins = 0;
             for (let i = 0; i < format; i++) {
-                if (setComplete(pScores[i], oScores[i]) && pScores[i] > oScores[i]) playerSetWins++;
+                if (setComplete(winnerScores[i], loserScores[i]) && winnerScores[i] > loserScores[i]) winnerSetWins++;
             }
 
-            // Step 3 — fill 6-0 for every subsequent set until player reaches setsToWin
-            for (let i = (retiredAtSet === -1 ? format : retiredAtSet + 1); i < format; i++) {
-                if (playerSetWins >= setsToWin) {
-                    // Match already won — zero out remaining sets
-                    pScores[i] = 0; oScores[i] = 0;
-                } else {
-                    pScores[i] = 6; oScores[i] = 0;
-                    playerSetWins++;
-                }
+            // Step 3 — fill 6-0 until winner reaches setsToWin; zero the rest
+            const startFrom = retiredAtSet === -1 ? format : retiredAtSet + 1;
+            for (let i = startFrom; i < format; i++) {
+                if (winnerSetWins >= setsToWin) { winnerScores[i] = 0; loserScores[i] = 0; }
+                else { winnerScores[i] = 6; loserScores[i] = 0; winnerSetWins++; }
             }
+            for (let i = format; i < 5; i++) { winnerScores[i] = 0; loserScores[i] = 0; }
+        }
 
-            // Zero out any sets beyond the format
-            for (let i = format; i < 5; i++) { pScores[i] = 0; oScores[i] = 0; }
+        if (oppRetired)    applyRetirement(pScores, oScores); // opponent retired → player wins
+        if (playerRetired) applyRetirement(oScores, pScores); // player retired    → opponent wins
 
-            // Determine the last set that has any content (player or opponent > 0)
+        if (retirementChecked) {
+            // Write adjusted scores back to input boxes
             let lastSet = -1;
             for (let i = format - 1; i >= 0; i--) {
                 if (pScores[i] > 0 || oScores[i] > 0) { lastSet = i; break; }
             }
-            // Write scores up to lastSet; blank out anything beyond
             playerSets.forEach((el, i)   => { el.value = i <= lastSet ? pScores[i] : ''; });
             opponentSets.forEach((el, i) => { el.value = i <= lastSet ? oScores[i] : ''; });
         }
@@ -470,10 +498,21 @@ window.onload = function () {
             `Double Fault: -0.5 pt (${tennisDblFt.value}) = ${dblftVal}`,
         ];
 
-        const retirementNote = retirementChecked ? '[Retirement — scores adjusted per PrizePicks rule]' : '';
+        const tennisHeader = buildHeader(document.getElementById('tennis-player-name').value);
 
-        showBreakdown('#tennis-breakdown', '#tennis-textarea-btn-cont', buildBreakdown(statLines, total, retirementNote));
-        tennisHzsChk = setupHideZerosCheckbox(tennisHzsChk, '#tennis-breakdown', statLines, tennisInputs, total, retirementNote);
+        // DNP: retirement checked but Set 1 not complete → show DNP only
+        const isDNP = retirementChecked && !setComplete(pScores[0], oScores[0]);
+        if (isDNP) {
+            const dnpText = withHeader(tennisHeader, 'BOBO');
+            showBreakdown('#tennis-breakdown', '#tennis-textarea-btn-cont', dnpText);
+            tennisTotalEl.innerHTML = '';
+            return;
+        }
+
+        const retirementNote = retirementChecked ? '[Retirement — scores adjusted per PrizePicks rule]' : '';
+        const tennisBreakdown = withHeader(tennisHeader, buildBreakdown(statLines, total, retirementNote));
+        showBreakdown('#tennis-breakdown', '#tennis-textarea-btn-cont', tennisBreakdown);
+        tennisHzsChk = setupHideZerosCheckbox(tennisHzsChk, '#tennis-breakdown', statLines, tennisInputs, total, retirementNote, tennisHeader);
     });
 
     tennisClearBtn.addEventListener('click', () => {
@@ -482,7 +521,10 @@ window.onload = function () {
             inp.value = '';
         });
         tennisVals.forEach(v => v.innerHTML = '');
-        retirementChk.checked = false;
+        document.getElementById('tennis-player-name').value = '';
+        retirementChk.checked    = false;
+        oppRetiredChk.checked    = false;
+        playerRetiredChk.checked = false;
         tennisTotalEl.innerHTML = '';
         document.querySelector('#tennis-breakdown').innerHTML = '';
         document.querySelector('#tennis-textarea-btn-cont').style.display = 'none';
@@ -549,14 +591,17 @@ window.onload = function () {
             `Knockdown: 10 pts (${mmaKD.value}) = ${kdVal}`,
         ];
 
-        showBreakdown('#mma-breakdown', '#mma-textarea-btn-cont', buildBreakdown(statLines, total, fcbLabel));
-        mmaHzsChk = setupHideZerosCheckbox(mmaHzsChk, '#mma-breakdown', statLines, mmaInputs, total, fcbLabel);
+        const mmaHeader   = buildHeader(document.getElementById('mma-player-name').value);
+        const mmaBreakdown = withHeader(mmaHeader, buildBreakdown(statLines, total, fcbLabel));
+        showBreakdown('#mma-breakdown', '#mma-textarea-btn-cont', mmaBreakdown);
+        mmaHzsChk = setupHideZerosCheckbox(mmaHzsChk, '#mma-breakdown', statLines, mmaInputs, total, fcbLabel, mmaHeader);
     });
 
     mmaClearBtn.addEventListener('click', () => {
         mmaInputs.forEach(i => i.value = '');
         mmaVals.forEach(v => v.innerHTML = '');
         mmaRadios.forEach(r => r.checked = false);
+        document.getElementById('mma-player-name').value = '';
         mmaTotalEl.innerHTML = '';
         document.querySelector('#mma-breakdown').innerHTML = '';
         document.querySelector('#mma-textarea-btn-cont').style.display = 'none';
@@ -618,14 +663,17 @@ window.onload = function () {
             `Being Knocked Down by Opponent: -12 pts (${boxBeingKD.value}) = ${beingKdVal}`,
         ];
 
-        showBreakdown('#box-breakdown', '#box-textarea-btn-cont', buildBreakdown(statLines, total, fcbLabel));
-        boxHzsChk = setupHideZerosCheckbox(boxHzsChk, '#box-breakdown', statLines, boxInputs, total, fcbLabel);
+        const boxHeader   = buildHeader(document.getElementById('box-player-name').value);
+        const boxBreakdown = withHeader(boxHeader, buildBreakdown(statLines, total, fcbLabel));
+        showBreakdown('#box-breakdown', '#box-textarea-btn-cont', boxBreakdown);
+        boxHzsChk = setupHideZerosCheckbox(boxHzsChk, '#box-breakdown', statLines, boxInputs, total, fcbLabel, boxHeader);
     });
 
     boxClearBtn.addEventListener('click', () => {
         boxInputs.forEach(i => i.value = '');
         boxVals.forEach(v => v.innerHTML = '');
         boxRadios.forEach(r => r.checked = false);
+        document.getElementById('box-player-name').value = '';
         boxTotalEl.innerHTML = '';
         document.querySelector('#box-breakdown').innerHTML = '';
         document.querySelector('#box-textarea-btn-cont').style.display = 'none';
@@ -715,13 +763,19 @@ window.onload = function () {
             `Kick/Punt/Field Goal Return Touchdown: 6 pts (${fballoKPFGRTD.value}) = ${kpfgrtdVal}`,
         ];
 
-        showBreakdown('#fballo-breakdown', '#fballo-textarea-btn-cont', buildBreakdown(statLines, total));
-        fballoHzsChk = setupHideZerosCheckbox(fballoHzsChk, '#fballo-breakdown', statLines, fballoInputs, total);
+        const fballoHeader   = buildHeader(
+            document.getElementById('fballo-player-name').value,
+            document.querySelector('input[name="fballo-period"]:checked')?.value
+        );
+        const fballoBreakdown = withHeader(fballoHeader, buildBreakdown(statLines, total));
+        showBreakdown('#fballo-breakdown', '#fballo-textarea-btn-cont', fballoBreakdown);
+        fballoHzsChk = setupHideZerosCheckbox(fballoHzsChk, '#fballo-breakdown', statLines, fballoInputs, total, '', fballoHeader);
     });
 
     fbálloClearBtn.addEventListener('click', () => {
         fballoInputs.forEach(i => i.value = '');
         fballoVals.forEach(v => v.innerHTML = '');
+        document.getElementById('fballo-player-name').value = '';
         fballoTotalEl.innerHTML = '';
         document.querySelector('#fballo-breakdown').innerHTML = '';
         document.querySelector('#fballo-textarea-btn-cont').style.display = 'none';

@@ -358,6 +358,17 @@ main { padding: 2rem 1.5rem 5rem; }
 }
 .radio-row span { font-size: .83rem; color: var(--text-secondary); }
 
+/* ── Player name input ───────────────────────────────────── */
+.player-name-input {
+  width: 100%;
+  margin-bottom: .6rem;
+  font-style: italic;
+}
+.player-name-input:not(:placeholder-shown) {
+  font-style: normal;
+  font-weight: 500;
+}
+
 /* Round pills for fight round selection */
 .round-pill-group {
   display: flex;
