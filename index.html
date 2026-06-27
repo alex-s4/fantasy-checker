@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="https://emoji.slack-edge.com/T8H1C5NQ0/gametimeops/5a036e54b83ebca7.gif" type="image/x-icon">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://kit.fontawesome.com/cda43cd265.js" crossorigin="anonymous"></script>
+  <title>GT Fantasy Score Calculator</title>
+</head>
+<body>
+
+<div id="root">
+
+  <!-- ── Header ────────────────────────────────────────── -->
+  <header>
+    <nav class="main-nav">
+      <div class="nav-inner">
+        <span class="main-brand-text"><span class="text-purple">Game</span><span class="text-green">Time</span> Platform 🐐</span>
+        <div class="nav-links">
+          <a href="./index.html" class="nav-item active">
+            <i class="fa-solid fa-calculator"></i> FS Calculator
+          </a>
+          <a href="./toi-calc.html" class="nav-item">
+            <i class="fa-solid fa-stopwatch"></i> Time Calculator
+          </a>
+          <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">
+            <i class="fa-solid fa-moon  icon-moon"></i>
+            <i class="fa-solid fa-sun   icon-sun"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+
+    <div class="page-heading">
+      <h2><i class="fa-solid fa-calculator"></i> Fantasy Score Calculator</h2>
+    </div>
+
+    <div class="sections-grid">
+
+      <!-- ══════════════════════════════════════════════════
+           BASKETBALL
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card">
+        <div class="card-header" id="head-bball">
+          <img alt="NBA" src="https://static.prizepicks.com/images/leagues/production/1.svg" class="league-icon">
+          <h3>Basketball FS</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-bball">
+
+          <!-- Modal trigger -->
+          <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#basketballModal">
+            <i class="fa-regular fa-circle-question"></i> How to check?
+          </button>
+
+          <table class="stat-table">
+            <tr>
+              <td>Points</td><td>1 pt</td>
+              <td><input type="number" id="bball-pts" class="stat-input bball-fs" min="0"></td>
+              <td><span id="bball-points-val" class="bball-val"></span></td>
+            </tr>
+            <tr>
+              <td>Rebound</td><td>1.2 pts</td>
+              <td><input type="number" id="bball-rebs" class="stat-input bball-fs" min="0"></td>
+              <td><span id="bball-rebounds-val" class="bball-val"></span></td>
+            </tr>
+            <tr>
+              <td>Assist</td><td>1.5 pts</td>
+              <td><input type="number" id="bball-asst" class="stat-input bball-fs" min="0"></td>
+              <td><span id="bball-assists-val" class="bball-val"></span></td>
+            </tr>
+            <tr>
+              <td>Block</td><td>3 pts</td>
+              <td><input type="number" id="bball-blk" class="stat-input bball-fs" min="0"></td>
+              <td><span id="bball-blocks-val" class="bball-val"></span></td>
+            </tr>
+            <tr>
+              <td>Steal</td><td>3 pts</td>
+              <td><input type="number" id="bball-stl" class="stat-input bball-fs" min="0"></td>
+              <td><span id="bball-steals-val" class="bball-val"></span></td>
+            </tr>
+            <tr>
+              <td>Turnover</td><td>−1 pt</td>
+              <td><input type="number" id="bball-to" class="stat-input bball-fs" min="0"></td>
+              <td><span id="bball-turnovers-val" class="bball-val"></span></td>
+            </tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="bball-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="bball-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="bball-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="bball-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="bball-textarea-btn-cont" class="breakdown-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="bball-hzs-checkbox"> Hide zero stats
+              </label>
+              <button id="bball-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
+           MLB PITCHER
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card">
+        <div class="card-header" id="head-bsballp">
+          <img alt="MLB" src="https://static.prizepicks.com/images/leagues/production/25.svg" class="league-icon">
+          <h3>MLB Pitcher FS</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-bsballp">
+
+          <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#pitcherModal">
+            <i class="fa-regular fa-circle-question"></i> How to check?
+          </button>
+
+          <table class="stat-table">
+            <tr>
+              <td>Win (W)</td><td>6 pts</td>
+              <td>
+                <input type="number" id="bsballp-win" class="bsballp-fs" hidden>
+                <label class="checkbox-row" style="gap:.4rem">
+                  <input type="checkbox" id="bsballp-win-checkbox"> Yes
+                </label>
+              </td>
+              <td><span id="bsballp-win-val" class="bsballp-val"></span></td>
+            </tr>
+            <tr>
+              <td>
+                Quality Start (QS)
+                <a tabindex="0" class="btn popover-btn" role="button"
+                   data-bs-toggle="popover" data-bs-trigger="focus"
+                   data-bs-title="Quality Start"
+                   data-bs-content="A stat awarded to a pitcher who pitches 6 or more innings while allowing 3 earned runs or less.">
+                  <i class="fa-solid fa-circle-info" style="font-size:.8rem"></i>
+                </a>
+              </td>
+              <td>4 pts</td>
+              <td><input id="bsballp-qs" class="bsballp-fs" hidden></td>
+              <td><span id="bsballp-qs-val" class="bsballp-val"></span></td>
+            </tr>
+            <tr>
+              <td>Earned Run (ER)</td><td>−3 pts</td>
+              <td><input type="number" id="bsballp-er" class="stat-input bsballp-fs" min="0"></td>
+              <td><span id="bsballp-er-val" class="bsballp-val"></span></td>
+            </tr>
+            <tr>
+              <td>Strikeout (K)</td><td>3 pts</td>
+              <td><input type="number" id="bsballp-k" class="stat-input bsballp-fs" min="0"></td>
+              <td><span id="bsballp-k-val" class="bsballp-val"></span></td>
+            </tr>
+            <tr>
+              <td>
+                Innings Pitched (IP)
+                <a tabindex="0" class="btn popover-btn" role="button"
+                   data-bs-toggle="popover" data-bs-trigger="focus"
+                   data-bs-title="Innings Pitched"
+                   data-bs-content="1 IP = 3 Outs; 0.1 IP = 1 Out">
+                  <i class="fa-solid fa-circle-info" style="font-size:.8rem"></i>
+                </a>
+              </td>
+              <td>1 pt/out</td>
+              <td><input type="number" id="bsballp-out" class="stat-input bsballp-fs" step="0.1" min="0" placeholder="6.0"></td>
+              <td><span id="bsballp-out-val" class="bsballp-val"></span></td>
+            </tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="bsballp-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="bsballp-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="bsballp-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="bsballp-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="bsballp-textarea-btn-cont" class="breakdown-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="bsballp-hzs-checkbox"> Hide zero stats
+              </label>
+              <button id="bsballp-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
+           MLB HITTER
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card">
+        <div class="card-header" id="head-bsballh">
+          <img alt="MLB" src="https://static.prizepicks.com/images/leagues/production/25.svg" class="league-icon">
+          <h3>MLB Hitter FS</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-bsballh">
+
+          <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#hitterModal">
+            <i class="fa-regular fa-circle-question"></i> How to check?
+          </button>
+
+          <table class="stat-table">
+            <tr>
+              <td>Single</td><td>3 pts</td>
+              <td><input type="number" id="bsballh-sing" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-sing-val" class="bsballh-val"></span></td>
+            </tr>
+            <tr>
+              <td>Double (2B)</td><td>5 pts</td>
+              <td><input type="number" id="bsballh-doub" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-doub-val" class="bsballh-val"></span></td>
+            </tr>
+            <tr>
+              <td>Triple (3B)</td><td>8 pts</td>
+              <td><input type="number" id="bsballh-trip" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-trip-val" class="bsballh-val"></span></td>
+            </tr>
+            <tr>
+              <td>Home Run (HR)</td><td>10 pts</td>
+              <td><input type="number" id="bsballh-hr" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-hr-val" class="bsballh-val"></span></td>
+            </tr>
+            <tr>
+              <td>Run (R)</td><td>2 pts</td>
+              <td><input type="number" id="bsballh-r" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-r-val" class="bsballh-val"></span></td>
+            </tr>
+            <tr>
+              <td>RBI</td><td>2 pts</td>
+              <td><input type="number" id="bsballh-rbi" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-rbi-val" class="bsballh-val"></span></td>
+            </tr>
+            <tr>
+              <td>Base on Balls (BB)</td><td>2 pts</td>
+              <td><input type="number" id="bsballh-bob" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-bob-val" class="bsballh-val"></span></td>
+            </tr>
+            <tr>
+              <td>Hit By Pitch (HBP)</td><td>2 pts</td>
+              <td><input type="number" id="bsballh-hbp" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-hbp-val" class="bsballh-val"></span></td>
+            </tr>
+            <tr>
+              <td>Stolen Base (SB)</td><td>5 pts</td>
+              <td><input type="number" id="bsballh-sb" class="stat-input bsballh-fs" min="0"></td>
+              <td><span id="bsballh-sb-val" class="bsballh-val"></span></td>
+            </tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="bsballh-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="bsballh-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="bsballh-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="bsballh-breakdown" class="breakdown-textarea" rows="10" readonly></textarea>
+            <div id="bsballh-textarea-btn-cont" class="breakdown-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="bsballh-hzs-checkbox"> Hide zero stats
+              </label>
+              <button id="bsballh-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
+           TENNIS
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card calc-card--wide">
+        <div class="card-header" id="head-tennis">
+          <img alt="Tennis" src="https://static.prizepicks.com/images/leagues/production/54.svg" class="league-icon">
+          <h3>Tennis FS</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-tennis">
+
+          <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#tennisModal">
+            <i class="fa-regular fa-circle-question"></i> How to check?
+          </button>
+
+          <!-- Score grid — columns update when format changes -->
+          <p class="section-label">Match score</p>
+          <div class="tennis-grid" id="tennis-score-grid">
+            <div></div>
+            <div class="set-label">S1</div>
+            <div class="set-label">S2</div>
+            <div class="set-label">S3</div>
+            <div class="set-label tennis-s45">S4</div>
+            <div class="set-label tennis-s45">S5</div>
+
+            <div class="grid-label">Player</div>
+            <input type="number" id="tennis-box-player-s1" class="stat-input tennis-score-input tennis-fs" min="0">
+            <input type="number" id="tennis-box-player-s2" class="stat-input tennis-score-input tennis-fs" min="0">
+            <input type="number" id="tennis-box-player-s3" class="stat-input tennis-score-input tennis-fs" min="0">
+            <input type="number" id="tennis-box-player-s4" class="stat-input tennis-score-input tennis-fs tennis-s45" min="0">
+            <input type="number" id="tennis-box-player-s5" class="stat-input tennis-score-input tennis-fs tennis-s45" min="0">
+
+            <div class="grid-label muted">Opponent</div>
+            <input type="number" id="tennis-box-opponent-s1" class="stat-input tennis-score-input tennis-fs" min="0">
+            <input type="number" id="tennis-box-opponent-s2" class="stat-input tennis-score-input tennis-fs" min="0">
+            <input type="number" id="tennis-box-opponent-s3" class="stat-input tennis-score-input tennis-fs" min="0">
+            <input type="number" id="tennis-box-opponent-s4" class="stat-input tennis-score-input tennis-fs tennis-s45" min="0">
+            <input type="number" id="tennis-box-opponent-s5" class="stat-input tennis-score-input tennis-fs tennis-s45" min="0">
+          </div>
+
+          <!-- Serve stats -->
+          <p class="section-label">Serve stats</p>
+          <table class="stat-table">
+            <tr>
+              <td>Ace</td><td>0.5 pt</td>
+              <td><input type="number" id="tennis-ac" class="stat-input tennis-fs" min="0"></td>
+              <td><span id="tennis-ac-val" class="tennis-val"></span></td>
+            </tr>
+            <tr>
+              <td>Double Fault</td><td>−0.5 pt</td>
+              <td><input type="number" id="tennis-dblft" class="stat-input tennis-fs" min="0"></td>
+              <td><span id="tennis-dblft-val" class="tennis-val"></span></td>
+            </tr>
+          </table>
+
+          <!-- Hidden computed inputs -->
+          <input type="hidden" id="tennis-mp" value="1" class="tennis-fs">
+          <input type="hidden" id="tennis-gw" class="tennis-fs">
+          <input type="hidden" id="tennis-gl" class="tennis-fs">
+          <input type="hidden" id="tennis-sw" class="tennis-fs">
+          <input type="hidden" id="tennis-sl" class="tennis-fs">
+
+          <!-- Format & Retirement controls -->
+          <p class="section-label">Match format</p>
+          <div class="round-pill-group" style="margin-bottom:.85rem">
+            <label class="round-pill" style="width:56px">
+              <input type="radio" name="tennis-format" id="tennis-bo3" value="3" checked> BO3
+            </label>
+            <label class="round-pill" style="width:56px">
+              <input type="radio" name="tennis-format" id="tennis-bo5" value="5"> BO5
+            </label>
+          </div>
+
+          <p class="section-label">Retirement</p>
+          <label class="checkbox-row" style="margin-bottom:.6rem">
+            <input type="checkbox" id="tennis-bs-retirement"> Opponent retired mid-match
+          </label>
+          <!-- kept hidden for JS compat; retirement checkbox now drives logic directly -->
+          <input type="radio" id="tennis-bs-p-retired"  name="tennis-bs-retired" class="hide" checked>
+          <input type="radio" id="tennis-bs-o-retired"  name="tennis-bs-retired" class="hide">
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="tennis-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="tennis-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="tennis-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="tennis-breakdown" class="breakdown-textarea" rows="9" readonly></textarea>
+            <div id="tennis-textarea-btn-cont" class="breakdown-actions">
+              <button id="tennis-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
+           MMA
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card calc-card--wide">
+        <div class="card-header" id="head-mma">
+          <img alt="MMA" src="https://static.prizepicks.com/images/leagues/production/23.svg" class="league-icon">
+          <h3>MMA FS</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-mma">
+
+          <table class="stat-table">
+            <tr>
+              <td>Significant Strikes</td><td>0.5 pts</td>
+              <td><input type="number" id="mma-sigstr" class="stat-input mma-fs" min="0"></td>
+              <td><span id="mma-sigstr-val" class="mma-val"></span></td>
+            </tr>
+            <tr>
+              <td>Submission Attempt</td><td>4 pts</td>
+              <td><input type="number" id="mma-subatt" class="stat-input mma-fs" min="0"></td>
+              <td><span id="mma-subatt-val" class="mma-val"></span></td>
+            </tr>
+            <tr>
+              <td>Takedown</td><td>5 pts</td>
+              <td><input type="number" id="mma-td" class="stat-input mma-fs" min="0"></td>
+              <td><span id="mma-td-val" class="mma-val"></span></td>
+            </tr>
+            <tr>
+              <td>Knockdown</td><td>10 pts</td>
+              <td><input type="number" id="mma-kd" class="stat-input mma-fs" min="0"></td>
+              <td><span id="mma-kd-val" class="mma-val"></span></td>
+            </tr>
+          </table>
+
+          <p class="section-label">Fight conclusion bonus</p>
+          <table class="fcb-table">
+            <tr><td><label for="mma-1strd">1st Round Win</label></td><td>50 pts</td><td><input type="radio" name="mma-fcb" id="mma-1strd" value="50" class="mma-fcb"></td></tr>
+            <tr><td><label for="mma-2ndrd">2nd Round Win</label></td><td>40 pts</td><td><input type="radio" name="mma-fcb" id="mma-2ndrd" value="40" class="mma-fcb"></td></tr>
+            <tr><td><label for="mma-3rdrd">3rd Round Win</label></td><td>30 pts</td><td><input type="radio" name="mma-fcb" id="mma-3rdrd" value="30" class="mma-fcb"></td></tr>
+            <tr><td><label for="mma-4thrd">4th/5th Round Win</label></td><td>20 pts</td><td><input type="radio" name="mma-fcb" id="mma-4thrd" value="20" class="mma-fcb"></td></tr>
+            <tr><td><label for="mma-dec">Decision Win</label></td><td>10 pts</td><td><input type="radio" name="mma-fcb" id="mma-dec" value="10" class="mma-fcb"></td></tr>
+            <tr><td><label for="mma-draw">Draw</label></td><td>0 pts</td><td><input type="radio" name="mma-fcb" id="mma-draw" value="0" class="mma-fcb"></td></tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="mma-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="mma-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="mma-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="mma-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="mma-textarea-btn-cont" class="breakdown-actions">
+              <button id="mma-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
+           BOXING
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card calc-card--wide">
+        <div class="card-header" id="head-box">
+          <img alt="Boxing" src="https://static.prizepicks.com/images/leagues/boxing.svg" class="league-icon">
+          <h3>Boxing FS</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-box">
+
+          <table class="stat-table">
+            <tr>
+              <td>Punch Landed</td><td>0.5 pts</td>
+              <td><input type="number" id="box-punch" class="stat-input box-fs" min="0"></td>
+              <td><span id="box-punch-val" class="box-val"></span></td>
+            </tr>
+            <tr>
+              <td>Knockdown on Opponent</td><td>12 pts</td>
+              <td><input type="number" id="box-kd" class="stat-input box-fs" min="0"></td>
+              <td><span id="box-kd-val" class="box-val"></span></td>
+            </tr>
+            <tr>
+              <td>Being Knocked Down</td><td>−12 pts</td>
+              <td><input type="number" id="box-beingkd" class="stat-input box-fs" min="0"></td>
+              <td><span id="box-beingkd-val" class="box-val"></span></td>
+            </tr>
+          </table>
+
+          <p class="section-label">Fight conclusion bonus</p>
+          <table class="fcb-table">
+            <tr><td><label for="box-1stto2ndrd">Win Rounds 1–2</label></td><td>100 pts</td><td><input type="radio" name="box-fcb" id="box-1stto2ndrd" value="100" class="box-fcb"></td></tr>
+            <tr><td><label for="box-3rdto6th">Win Rounds 3–6</label></td><td>75 pts</td><td><input type="radio" name="box-fcb" id="box-3rdto6th" value="75" class="box-fcb"></td></tr>
+            <tr><td><label for="box-7thto10th">Win Rounds 7–10</label></td><td>50 pts</td><td><input type="radio" name="box-fcb" id="box-7thto10th" value="50" class="box-fcb"></td></tr>
+            <tr><td><label for="box-11thto12th">Win Rounds 11–12</label></td><td>25 pts</td><td><input type="radio" name="box-fcb" id="box-11thto12th" value="25" class="box-fcb"></td></tr>
+            <tr><td><label for="box-dec">Decision Win</label></td><td>20 pts</td><td><input type="radio" name="box-fcb" id="box-dec" value="20" class="box-fcb"></td></tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="box-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="box-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="box-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="box-breakdown" class="breakdown-textarea" rows="6" readonly></textarea>
+            <div id="box-textarea-btn-cont" class="breakdown-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="box-hzs-checkbox"> Hide zero stats
+              </label>
+              <button id="box-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
+           NFL / CFB OFFENSIVE
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card calc-card--wide">
+        <div class="card-header" id="head-fballo">
+          <img alt="NFL" src="https://static.prizepicks.com/images/leagues/production/30.svg" class="league-icon">
+          <h3>NFL / CFB Offensive FS</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-fballo">
+
+          <table class="stat-table">
+            <tr><td>Passing Yards</td><td>0.04 pts/yd</td><td><input type="number" id="fballo-passyd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-passyd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Passing TDs</td><td>4 pts</td><td><input type="number" id="fballo-passtd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-passtd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Interceptions</td><td>−1 pt</td><td><input type="number" id="fballo-int" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-int-val" class="fballo-val"></span></td></tr>
+            <tr><td>Rushing Yards</td><td>0.1 pts/yd</td><td><input type="number" id="fballo-rushyd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-rushyd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Rushing TDs</td><td>6 pts</td><td><input type="number" id="fballo-rushtd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-rushtd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Receiving Yards</td><td>0.1 pts/yd</td><td><input type="number" id="fballo-recyd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-recyd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Receiving TDs</td><td>6 pts</td><td><input type="number" id="fballo-rectd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-rectd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Receptions</td><td>1 pt</td><td><input type="number" id="fballo-rec" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-rec-val" class="fballo-val"></span></td></tr>
+            <tr><td>Fumbles Lost</td><td>−1 pt</td><td><input type="number" id="fballo-fl" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-fl-val" class="fballo-val"></span></td></tr>
+            <tr><td>2-Pt Conversions</td><td>2 pts</td><td><input type="number" id="fballo-2ptc" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-2ptc-val" class="fballo-val"></span></td></tr>
+            <tr><td>Off. Fumble Recovery TD</td><td>6 pts</td><td><input type="number" id="fballo-ofrt" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-ofrt-val" class="fballo-val"></span></td></tr>
+            <tr><td>Kick/Punt/FG Return TD</td><td>6 pts</td><td><input type="number" id="fballo-kpfgrtd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-kpfgrtd-val" class="fballo-val"></span></td></tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="fballo-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="fballo-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="fballo-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="fballo-breakdown" class="breakdown-textarea" rows="14" readonly></textarea>
+            <div id="fballo-textarea-btn-cont" class="breakdown-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="fballo-hzs-checkbox"> Hide zero stats
+              </label>
+              <button id="fballo-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NFL DST — hidden (IDs kept for JS compatibility) -->
+      <div class="hide">
+        <div id="head-fballd"></div>
+        <div id="content-fballd">
+          <span id="fballd-total-fs"></span>
+          <button id="fballd-btn"></button><button id="fballd-clear"></button><button id="fballd-copy"></button>
+          <input id="fballd-hzs-checkbox" type="checkbox">
+          <textarea id="fballd-breakdown"></textarea>
+          <div id="fballd-textarea-btn-cont"></div>
+          <input id="fballd-sac" class="fballd-fs"><input id="fballd-int" class="fballd-fs">
+          <input id="fballd-fumbrec" class="fballd-fs"><input id="fballd-pkfgrtd" class="fballd-fs">
+          <input id="fballd-intrettd" class="fballd-fs"><input id="fballd-fumbrectd" class="fballd-fs">
+          <input id="fballd-blkpunt" class="fballd-fs"><input id="fballd-saf" class="fballd-fs">
+          <input id="fballd-blkkick" class="fballd-fs"><input id="fballd-2ptconv" class="fballd-fs">
+          <span id="fballd-sac-val" class="fballd-val"></span><span id="fballd-int-val" class="fballd-val"></span>
+          <span id="fballd-fumbrec-val" class="fballd-val"></span><span id="fballd-pkfgrtd-val" class="fballd-val"></span>
+          <span id="fballd-intrettd-val" class="fballd-val"></span><span id="fballd-fumbrectd-val" class="fballd-val"></span>
+          <span id="fballd-blkpunt-val" class="fballd-val"></span><span id="fballd-saf-val" class="fballd-val"></span>
+          <span id="fballd-blkkick-val" class="fballd-val"></span><span id="fballd-2ptconv-val" class="fballd-val"></span>
+          <input type="radio" name="fballd-pa" class="fballd-pa" value="0">
+        </div>
+      </div>
+
+      <!-- NASCAR — hidden -->
+      <div class="hide">
+        <div id="head-nascar"></div>
+        <div id="content-nascar">
+          <span id="nascar-total-fs"></span>
+          <button id="nascar-btn"></button><button id="nascar-clear"></button><button id="nascar-copy"></button>
+          <input id="nascar-hzs-checkbox" type="checkbox">
+          <textarea id="nascar-breakdown"></textarea>
+          <div id="nascar-textarea-btn-cont"></div>
+          <input id="nascar-pd" class="nascar-fs"><input id="nascar-fl" class="nascar-fs"><input id="nascar-ll" class="nascar-fs">
+          <span id="nascar-pd-val" class="nascar-val"></span><span id="nascar-fl-val" class="nascar-val"></span><span id="nascar-ll-val" class="nascar-val"></span>
+          <input type="radio" name="nascar-fpp" class="nascar-fpp" value="0">
+        </div>
+      </div>
+
+    </div><!-- /sections-grid -->
+  </main>
+
+  <!-- ── Toast ──────────────────────────────────────────── -->
+  <div class="gt-toast" id="gt-toast">
+    <i class="fa-solid fa-circle-check"></i> Copied to clipboard!
+  </div>
+
+  <!-- Hidden bootstrap toast trigger (kept for JS compat) -->
+  <button id="liveToastBtn" hidden></button>
+  <div id="liveToast" hidden></div>
+
+  <footer>Copyright &copy; 2025 &nbsp;&middot;&nbsp; All rights reserved.
+  </footer>
+
+  <!-- ══════════════════════════════════════════════════════
+       MODALS
+  ══════════════════════════════════════════════════════ -->
+
+  <!-- Basketball -->
+  <div class="modal fade" id="basketballModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+      <div class="modal-content">
+        <div class="modal-header"><h1 class="modal-title fs-4">Basketball Fantasy Score</h1><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <h2>How to check?</h2>
+          <h5>NBA Box Score</h5><img src="./assets/images/bball2.png" alt="" class="modal-img"><img src="./assets/images/bball3.png" alt="" class="modal-img fantasy-ss">
+          <hr><h5>Gamebook</h5><img src="./assets/images/bball4.png" alt="" class="modal-img"><img src="./assets/images/bball5.png" alt="" class="modal-img fantasy-ss">
+          <hr><h5>ESPN (NCAA)</h5><img src="./assets/images/bball6.png" alt="" class="modal-img"><img src="./assets/images/bball7.png" alt="" class="modal-img fantasy-ss">
+          <hr><h5>WNBA</h5><img src="./assets/images/bball8.png" alt="" class="modal-img"><img src="./assets/images/bball9.png" alt="" class="modal-img fantasy-ss">
+          <hr><h2>Stats providers</h2>
+          <p><strong>NBA:</strong> nba.com &nbsp;|&nbsp; <strong>CBB:</strong> espn.com, ncaa.com &nbsp;|&nbsp; <strong>WNBA:</strong> wnba.com</p>
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MLB Pitcher -->
+  <div class="modal fade" id="pitcherModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+      <div class="modal-content">
+        <div class="modal-header"><h1 class="modal-title fs-4">Pitcher Fantasy Score</h1><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="info-banner"><i class="fa-solid fa-circle-info"></i><div><strong>Innings Pitched:</strong> 1 IP = 3 Outs · 0.1 IP = 1 Out · Example: 1.1 IP = 4 Outs<br><strong>Quality Start:</strong> 6+ IP &amp; 3 or fewer ER</div></div>
+          <h5>MLB Box Score</h5><img src="./assets/images/basball1.png" alt="" class="modal-img"><img src="./assets/images/basball2.png" alt="" class="modal-img fantasy-ss">
+          <hr><h5>ESPN Stats</h5><img src="./assets/images/basball3.png" alt="" class="modal-img"><img src="./assets/images/basball4.png" alt="" class="modal-img fantasy-ss">
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MLB Hitter -->
+  <div class="modal fade" id="hitterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+      <div class="modal-content">
+        <div class="modal-header"><h1 class="modal-title fs-4">Hitter Fantasy Score</h1><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="info-banner"><i class="fa-solid fa-circle-info"></i><div><strong>Total Bases:</strong> Single=1 · 2B=2 · 3B=3 · HR=4<br><strong>Singles</strong> = TB − (2×2B) − (3×3B) − (4×HR)</div></div>
+          <h5>MLB Stats</h5><img src="./assets/images/basballh1.png" alt="" class="modal-img"><img src="./assets/images/basballh2.png" alt="" class="modal-img fantasy-ss">
+          <hr><img src="./assets/images/basballh3.png" alt="" class="modal-img"><img src="./assets/images/basballh4.png" alt="" class="modal-img fantasy-ss">
+          <hr><h5>ESPN Box Score</h5><img src="./assets/images/basballh5.png" alt="" class="modal-img"><img src="./assets/images/basballh6.png" alt="" class="modal-img fantasy-ss">
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tennis -->
+  <div class="modal fade" id="tennisModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+      <div class="modal-content">
+        <div class="modal-header"><h1 class="modal-title fs-4">Tennis Fantasy Score</h1><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="info-banner"><i class="fa-solid fa-circle-info"></i><div>If an athlete retires, their opponent is scored as if they won all remaining games. A super tiebreak counts as 1 game.</div></div>
+          <h5>ATP Tour Stats</h5><img src="./assets/images/tenn1.png" alt="" class="modal-img"><img src="./assets/images/tenn2.png" alt="" class="modal-img fantasy-ss">
+          <hr><img src="./assets/images/tenn3.png" alt="" class="modal-img"><img src="./assets/images/tenn4.png" alt="" class="modal-img fantasy-ss">
+          <hr><h5>WTA Stats</h5><img src="./assets/images/tenn5.png" alt="" class="modal-img"><img src="./assets/images/tenn6.png" alt="" class="modal-img fantasy-ss">
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#root -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<script type="module" src="./app.js"></script>
+<script>
+  // ── Custom toast ──────────────────────────────────────────
+  window.__showToast = function() {
+    const t = document.getElementById('gt-toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  };
+  document.getElementById('liveToastBtn').addEventListener('click', window.__showToast);
+
+  // ── Tennis BO3/BO5 grid visibility ───────────────────────
+  function applyTennisFormat() {
+    const isBO5 = document.getElementById('tennis-bo5').checked;
+    document.querySelectorAll('.tennis-s45').forEach(el => {
+      el.style.display = isBO5 ? '' : 'none';
+    });
+    // Also update grid columns
+    const grid = document.getElementById('tennis-score-grid');
+    if (grid) grid.style.gridTemplateColumns = isBO5
+      ? '60px repeat(5, 1fr)'
+      : '60px repeat(3, 1fr)';
+  }
+  applyTennisFormat(); // run on load
+  document.querySelectorAll('input[name="tennis-format"]').forEach(r =>
+    r.addEventListener('change', applyTennisFormat)
+  );
+  const html   = document.documentElement;
+  const toggle = document.getElementById('theme-toggle');
+
+  // Restore saved preference
+  if (localStorage.getItem('gt-theme') === 'light') html.dataset.theme = 'light';
+
+  toggle.addEventListener('click', () => {
+    const isLight = html.dataset.theme === 'light';
+    html.dataset.theme = isLight ? '' : 'light';
+    localStorage.setItem('gt-theme', isLight ? '' : 'light');
+  });
+
+  // ── Enter key → Calculate ─────────────────────────────────
+  // When the user presses Enter inside any input, find that
+  // input's parent .calc-card and click its Calculate button.
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const card = e.target.closest('.calc-card');
+    if (!card) return;
+    const btn = card.querySelector('.btn-primary');
+    if (btn) { e.preventDefault(); btn.click(); }
+  });
+</script>
+</body>
+</html>
