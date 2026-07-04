@@ -358,6 +358,25 @@ main { padding: 2rem 1.5rem 5rem; }
 }
 .radio-row span { font-size: .83rem; color: var(--text-secondary); }
 
+/* ── Auto-fill / fetch ───────────────────────────────────── */
+.fetch-row {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: .4rem;
+}
+.fetch-msg {
+  font-size: .78rem;
+  min-height: 1.1em;
+  margin-bottom: .6rem;
+  color: var(--text-muted);
+  transition: color var(--transition);
+}
+.fetch-msg--loading { color: var(--purple-light); }
+.fetch-msg--success { color: var(--green); }
+.fetch-msg--error   { color: #ff6b6b; }
+
 /* ── Player name input ───────────────────────────────────── */
 .player-name-input {
   width: 100%;
@@ -712,4 +731,12 @@ a.popover-btn { padding: 0 0 0 6px; }
   .calc-card, .calc-card--wide { width: 100%; max-width: 420px; }
   .nav-inner { flex-wrap: wrap; gap: .5rem; }
   .main-brand-text { font-size: 1.5rem; }
+}
+
+.matchup-line {
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  min-height: 1.1em;
+  margin-bottom: .6rem;
 }

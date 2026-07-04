@@ -257,10 +257,107 @@ window.onload = function () {
         bsballpTotalEl.innerHTML = '';
         document.querySelector('#bsballp-breakdown').innerHTML = '';
         document.querySelector('#bsballp-textarea-btn-cont').style.display = 'none';
+
+        document.getElementById('bsballp-matchup').textContent = '';
+        document.getElementById('bsballp-fetch-msg').textContent = '';
     });
 
     bsballpCopyBtn.addEventListener('click',  () => copyBreakdown('#bsballp-breakdown'));
     bsballpHeaderEl.addEventListener('click', () => toggleSection('#content-bsballp'));
+
+    // ── MLB Pitcher — Auto-fill from MLB Stats API ────────────────
+    // Reuses MLB_API and resolveMlbPlayer() defined in the Hitter section.
+    const bsballpFetchBtn  = document.querySelector('#bsballp-fetch-btn');
+    const bsballpDateInput = document.querySelector('#bsballp-date');
+    const bsballpFetchMsg  = document.querySelector('#bsballp-fetch-msg');
+    const bsballpMatchup   = document.querySelector('#bsballp-matchup');
+
+    function setPitcherFetchMsg(msg, type = '') {
+        bsballpFetchMsg.textContent = msg;
+        bsballpFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    // Innings pitched helpers: "6.2" ⇄ total outs (2 outs = 0.2 IP)
+    function ipToOuts(ip) {
+        const n = Number(ip) || 0;
+        const whole = Math.floor(n);
+        const frac  = Math.round((n - whole) * 10); // 0, 1, or 2
+        return whole * 3 + frac;
+    }
+    function outsToIp(outs) {
+        return `${Math.floor(outs / 3)}.${outs % 3}`;
+    }
+
+    async function fetchMlbPitcherStats() {
+        const name = document.getElementById('bsballp-player-name').value.trim();
+        const date = bsballpDateInput.value;
+
+        if (!name) { setPitcherFetchMsg('Enter a player name first.', 'error'); return; }
+        if (!date) { setPitcherFetchMsg('Pick a date first.', 'error'); return; }
+
+        const season = date.slice(0, 4);
+        bsballpFetchBtn.disabled = true;
+        bsballpMatchup.textContent = '';
+        setPitcherFetchMsg('Looking up player…', 'loading');
+
+        try {
+            const player = await resolveMlbPlayer(name, season);
+            if (!player) {
+                setPitcherFetchMsg(`No MLB player matching "${name}" in ${season}.`, 'error');
+                return;
+            }
+
+            setPitcherFetchMsg(`Found ${player.fullName}. Fetching game log…`, 'loading');
+
+            const res = await fetch(`${MLB_API}/people/${player.id}/stats?stats=gameLog&group=pitching&season=${season}`);
+            if (!res.ok) throw new Error('game log request failed');
+            const data = await res.json();
+
+            const splits = data.stats?.[0]?.splits || [];
+            const games  = splits.filter(s => s.date === date);
+
+            if (games.length === 0) {
+                setPitcherFetchMsg(`${player.fullName} has no pitching log on ${date}.`, 'error');
+                return;
+            }
+
+            // Aggregate (sums doubleheaders; innings summed via outs)
+            const agg = games.reduce((a, g) => {
+                const s = g.stat || {};
+                a.earnedRuns += s.earnedRuns || 0;
+                a.strikeOuts += s.strikeOuts || 0;
+                a.wins       += s.wins       || 0;
+                a.outs       += ipToOuts(s.inningsPitched);
+                return a;
+            }, { earnedRuns:0, strikeOuts:0, wins:0, outs:0 });
+
+            // Populate fields — QS and Win points are computed by the Go handler
+            bsballpER.value  = agg.earnedRuns;
+            bsballpK.value   = agg.strikeOuts;
+            bsballpOut.value = outsToIp(agg.outs);
+            bsballpWinChk.checked = agg.wins > 0;
+
+            const g0 = games[0];
+            if (g0.team?.name && g0.opponent?.name) {
+                bsballpMatchup.textContent = `${g0.team.name} vs ${g0.opponent.name}`;
+            }
+
+            const dhNote = games.length > 1 ? ` (${games.length} games combined)` : '';
+            setPitcherFetchMsg(`Loaded ${player.fullName} — ${date}${dhNote}.`, 'success');
+
+            bsballpGoBtn.click(); // auto-calculate
+
+        } catch (err) {
+            setPitcherFetchMsg(
+                'Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message,
+                'error'
+            );
+        } finally {
+            bsballpFetchBtn.disabled = false;
+        }
+    }
+
+    bsballpFetchBtn.addEventListener('click', fetchMlbPitcherStats);
 
 
     // ========================================================
@@ -286,6 +383,8 @@ window.onload = function () {
     const bsballhBOB  = document.getElementById('bsballh-bob');
     const bsballhHBP  = document.getElementById('bsballh-hbp');
     const bsballhSB   = document.getElementById('bsballh-sb');
+
+    const bsballhMatchup = document.querySelector('#bsballh-matchup');
 
     bsballhGoBtn.addEventListener('click', () => {
 
@@ -339,10 +438,124 @@ window.onload = function () {
         bsballhTotalEl.innerHTML = '';
         document.querySelector('#bsballh-breakdown').innerHTML = '';
         document.querySelector('#bsballh-textarea-btn-cont').style.display = 'none';
+        document.getElementById('bsballh-matchup').textContent = '';
     });
 
     bsballhCopyBtn.addEventListener('click',  () => copyBreakdown('#bsballh-breakdown'));
     bsballhHeaderEl.addEventListener('click', () => toggleSection('#content-bsballh'));
+
+    // ── MLB Hitter — Auto-fill from MLB Stats API ─────────────────
+    // Data source: statsapi.mlb.com/api/v1 (official, free, no auth).
+    // Flow: name → player ID → hitting game log → match date → fields.
+    const MLB_API           = 'https://statsapi.mlb.com/api/v1';
+    const bsballhFetchBtn    = document.querySelector('#bsballh-fetch-btn');
+    const bsballhDateInput   = document.querySelector('#bsballh-date');
+    const bsballhFetchMsg    = document.querySelector('#bsballh-fetch-msg');
+
+    function setHitterFetchMsg(msg, type = '') {
+        bsballhFetchMsg.textContent = msg;
+        bsballhFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    /** Resolve a player name to their MLB person record for a given season. */
+    async function resolveMlbPlayer(name, season) {
+        const res = await fetch(`${MLB_API}/sports/1/players?season=${season}`);
+        if (!res.ok) throw new Error('player list request failed');
+        const data = await res.json();
+        const target = name.trim().toLowerCase();
+        const people = data.people || [];
+        // Prefer exact full-name match, then a partial contains match
+        return people.find(p => p.fullName.toLowerCase() === target)
+            || people.find(p => p.fullName.toLowerCase().includes(target))
+            || null;
+    }
+
+    async function fetchMlbHitterStats() {
+        const name = document.getElementById('bsballh-player-name').value.trim();
+        const date = bsballhDateInput.value; // YYYY-MM-DD
+
+        if (!name) { setHitterFetchMsg('Enter a player name first.', 'error'); return; }
+        if (!date) { setHitterFetchMsg('Pick a date first.', 'error'); return; }
+
+        const season = date.slice(0, 4);
+        bsballhFetchBtn.disabled = true;
+        setHitterFetchMsg('Looking up player…', 'loading');
+
+        bsballhMatchup.textContent = '';
+
+        try {
+            const player = await resolveMlbPlayer(name, season);
+            if (!player) {
+                setHitterFetchMsg(`No MLB player matching "${name}" in ${season}.`, 'error');
+                return;
+            }
+
+            setHitterFetchMsg(`Found ${player.fullName}. Fetching game log…`, 'loading');
+
+            const res = await fetch(`${MLB_API}/people/${player.id}/stats?stats=gameLog&group=hitting&season=${season}`);
+            if (!res.ok) throw new Error('game log request failed');
+            const data = await res.json();
+
+            const splits = data.stats?.[0]?.splits || [];
+            const games  = splits.filter(s => s.date === date);
+
+            if (games.length === 0) {
+                setHitterFetchMsg(`${player.fullName} has no hitting log on ${date}.`, 'error');
+                return;
+            }
+
+            // Aggregate (sums doubleheaders into one entry)
+            const agg = games.reduce((a, g) => {
+                const s = g.stat || {};
+                a.hits     += s.hits        || 0;
+                a.doubles  += s.doubles     || 0;
+                a.triples  += s.triples     || 0;
+                a.homeRuns += s.homeRuns    || 0;
+                a.runs     += s.runs        || 0;
+                a.rbi      += s.rbi         || 0;
+                a.bb       += s.baseOnBalls || 0;
+                a.hbp      += s.hitByPitch  || 0;
+                a.sb       += s.stolenBases || 0;
+                return a;
+            }, { hits:0, doubles:0, triples:0, homeRuns:0, runs:0, rbi:0, bb:0, hbp:0, sb:0 });
+
+            const singles = Math.max(0, agg.hits - agg.doubles - agg.triples - agg.homeRuns);
+
+            // Populate the hitter fields
+            bsballhSing.value = singles;
+            bsballhDoub.value = agg.doubles;
+            bsballhTrip.value = agg.triples;
+            bsballhHR.value   = agg.homeRuns;
+            bsballhR.value    = agg.runs;
+            bsballhRBI.value  = agg.rbi;
+            bsballhBOB.value  = agg.bb;
+            bsballhHBP.value  = agg.hbp;
+            bsballhSB.value   = agg.sb;
+
+            const dhNote = games.length > 1 ? ` (${games.length} games combined)` : '';
+            setHitterFetchMsg(`Loaded ${player.fullName} — ${date}${dhNote}.`, 'success');
+
+            const g0       = games[0];
+            const teamName = g0.team?.name || '';
+            const oppName  = g0.opponent?.name || '';
+            if (teamName && oppName) {
+                bsballhMatchup.textContent = `${teamName} vs ${oppName}`;
+            }
+
+            // Auto-calculate
+            bsballhGoBtn.click();
+
+        } catch (err) {
+            setHitterFetchMsg(
+                'Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message,
+                'error'
+            );
+        } finally {
+            bsballhFetchBtn.disabled = false;
+        }
+    }
+
+    bsballhFetchBtn.addEventListener('click', fetchMlbHitterStats);
 
 
     // ========================================================
@@ -503,9 +716,9 @@ window.onload = function () {
         // DNP: retirement checked but Set 1 not complete → show DNP only
         const isDNP = retirementChecked && !setComplete(pScores[0], oScores[0]);
         if (isDNP) {
-            const dnpText = withHeader(tennisHeader, 'BOBO');
+            const dnpText = withHeader(tennisHeader, 'Fantasy Score Projection settled as DNP');
             showBreakdown('#tennis-breakdown', '#tennis-textarea-btn-cont', dnpText);
-            tennisTotalEl.innerHTML = '';
+            tennisTotalEl.innerHTML = 'DNP';
             return;
         }
 
