@@ -1040,7 +1040,7 @@ window.onload = function () {
         // DNP: retirement checked but Set 1 not complete → show DNP only
         const isDNP = retirementChecked && !setComplete(pScores[0], oScores[0]);
         if (isDNP) {
-            const dnpText = withHeader(tennisHeader, 'Fantasy Score Projection settled as DNP');
+            const dnpText = withHeader(tennisHeader, 'BOBO');
             showBreakdown('#tennis-breakdown', '#tennis-textarea-btn-cont', dnpText);
             tennisTotalEl.innerHTML = 'DNP';
             return;
