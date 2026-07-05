@@ -2,55 +2,42 @@
 //  GameTime Platform — Fantasy Score Calculator
 //  app.js
 // ============================================================
-
-
 window.onload = function () {
-
     // --------------------------------------------------------
     //  BOOTSTRAP INIT
     // --------------------------------------------------------
-
     const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
     [...popoverTriggerList].map(el => new bootstrap.Popover(el));
-
     const toastTrigger      = document.getElementById('liveToastBtn');
     const toastLiveExample  = document.getElementById('liveToast');
     const triggerToastBtn   = document.getElementById('liveToastBtn'); // used to fire "Copied!" toast
-
     if (toastTrigger) {
         const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toastLiveExample);
         toastTrigger.addEventListener('click', () => toastBootstrap.show());
     }
-
-
     // --------------------------------------------------------
     //  SHARED UTILITIES
     // --------------------------------------------------------
-
     /** Fill empty inputs with "0" so the breakdown text is never blank. */
     function fillEmptyInputs(inputs) {
         inputs.forEach(input => {
             if (input.value === '') input.value = 0;
         });
     }
-
     /** Build a plain-text breakdown string from an array of stat lines + total. */
     function buildBreakdown(statLines, total, trailText = '') {
         return statLines.join('\n') + (trailText ? '\n' + trailText : '') + '\n\nTOTAL FS = ' + total;
     }
-
     /** Build the same breakdown but skipping lines whose matching input is "0". */
     function buildBreakdownHideZeros(statLines, inputs, total, trailText = '') {
         const filtered = statLines.filter((_, i) => inputs[i] && inputs[i].value !== '0');
         return filtered.join('\n') + (trailText ? '\n' + trailText : '') + '\n\nTOTAL FS = ' + total;
     }
-
     /** Write text to the breakdown textarea and show the copy-button container. */
     function showBreakdown(textareaId, btnContId, text) {
         document.querySelector(textareaId).innerHTML = text;
         document.querySelector(btnContId).style.display = 'block';
     }
-
     /** Build breakdown header line from name + optional period label.
      *  - With period:  "LeBron James - 1Q FS" or "1Q FS" (no name)
      *  - Without:      "LeBron James FS"        or ""     (no name, no period)
@@ -63,7 +50,6 @@ window.onload = function () {
         if (p)       return `${p} FS`;
         return '';
     }
-
     /** Prepend header to a breakdown string if header is non-empty. */
     function withHeader(header, breakdown) {
         return header ? `${header}\n${breakdown}` : breakdown;
@@ -72,7 +58,6 @@ window.onload = function () {
         const el = document.querySelector(contentSelector);
         el.style.display = (el.style.display === 'block') ? 'none' : 'block';
     }
-
     /** Copy a textarea's contents to the clipboard and trigger the toast. */
     function copyBreakdown(textareaSelector) {
         const el = document.querySelector(textareaSelector);
@@ -81,7 +66,6 @@ window.onload = function () {
         triggerToastBtn.click();
         navigator.clipboard.writeText(el.value);
     }
-
     /**
      * Wire up the "Hide zero stats" checkbox.
      * Must be called inside the Go-button handler (after statLines + total are known).
@@ -90,17 +74,14 @@ window.onload = function () {
         const fresh = checkbox.cloneNode(true);
         checkbox.parentNode.replaceChild(fresh, checkbox);
         fresh.checked = false;
-
         fresh.addEventListener('click', () => {
             const body = fresh.checked
                 ? buildBreakdownHideZeros(statLines, inputs, total, trailText)
                 : buildBreakdown(statLines, total, trailText);
             document.querySelector(textareaId).innerHTML = withHeader(header, body);
         });
-
         return fresh;
     }
-
     /** Get the checked radio value from a NodeList; returns 0 if none checked. */
     function getCheckedRadioValue(radios) {
         for (const r of radios) {
@@ -108,40 +89,31 @@ window.onload = function () {
         }
         return 0;
     }
-
-
     // ========================================================
     //  BASKETBALL (NBA / WNBA / CBB)
     // ========================================================
-
     const bballTotalEl     = document.querySelector('#bball-total-fs');
     const bballGoBtn       = document.querySelector('#bball-btn');
     const bballClearBtn    = document.querySelector('#bball-clear');
     const bballCopyBtn     = document.querySelector('#bball-copy');
     const bballHeaderEl    = document.querySelector('#head-bball');
     let   bballHzsChk      = document.querySelector('#bball-hzs-checkbox');
-
     const bballInputs = document.querySelectorAll('.bball-fs');
     const bballVals   = document.querySelectorAll('.bball-val');
-
     const bballPts  = document.getElementById('bball-pts');
     const bballRebs = document.getElementById('bball-rebs');
     const bballAst  = document.getElementById('bball-asst');
     const bballBlk  = document.getElementById('bball-blk');
     const bballStl  = document.getElementById('bball-stl');
     const bballTo   = document.getElementById('bball-to');
-
     bballGoBtn.addEventListener('click', () => {
-
         const ptsVal  = Number(bballPts.value);
         const rebsVal = Number((Number(bballRebs.value) * 1.2).toFixed(1));
         const astVal  = Number((Number(bballAst.value)  * 1.5).toFixed(1));
         const blkVal  = Number(bballBlk.value) * 3;
         const stlVal  = Number(bballStl.value) * 3;
         const toVal   = Number(bballTo.value)  * -1;
-
         const total = Number((ptsVal + rebsVal + astVal + blkVal + stlVal + toVal).toFixed(1));
-
         // Update inline value displays
         document.querySelector('#bball-points-val').innerHTML   = `= ${ptsVal}`;
         document.querySelector('#bball-rebounds-val').innerHTML = `= ${rebsVal}`;
@@ -149,10 +121,8 @@ window.onload = function () {
         document.querySelector('#bball-blocks-val').innerHTML   = `= ${blkVal}`;
         document.querySelector('#bball-steals-val').innerHTML   = `= ${stlVal}`;
         document.querySelector('#bball-turnovers-val').innerHTML= `= ${toVal}`;
-
         bballTotalEl.innerHTML = total;
         fillEmptyInputs(bballInputs);
-
         const statLines = [
             `Points: 1 pt (${bballPts.value}) = ${ptsVal}`,
             `Rebound: 1.2 pts (${bballRebs.value}) = ${rebsVal}`,
@@ -161,7 +131,6 @@ window.onload = function () {
             `Steal: 3 pts (${bballStl.value}) = ${stlVal}`,
             `Turnover: -1 pt (${bballTo.value}) = ${toVal}`,
         ];
-
         const bballHeader = buildHeader(
             document.getElementById('bball-player-name').value,
             document.querySelector('input[name="bball-period"]:checked')?.value
@@ -170,7 +139,6 @@ window.onload = function () {
         showBreakdown('#bball-breakdown', '#bball-textarea-btn-cont', bballBreakdown);
         bballHzsChk = setupHideZerosCheckbox(bballHzsChk, '#bball-breakdown', statLines, bballInputs, total, '', bballHeader);
     });
-
     bballClearBtn.addEventListener('click', () => {
         bballInputs.forEach(i => i.value = '');
         bballVals.forEach(v => v.innerHTML = '');
@@ -178,63 +146,169 @@ window.onload = function () {
         bballTotalEl.innerHTML = '';
         document.querySelector('#bball-breakdown').innerHTML = '';
         document.querySelector('#bball-textarea-btn-cont').style.display = 'none';
+        document.getElementById('bball-matchup').textContent = '';
+        document.getElementById('bball-fetch-msg').textContent = '';
     });
-
     bballCopyBtn.addEventListener('click',   () => copyBreakdown('#bball-breakdown'));
     bballHeaderEl.addEventListener('click',  () => toggleSection('#content-bball'));
-
-
+    // ── Basketball — Auto-fill from ESPN (NBA) ────────────────────
+    // Data source: ESPN's public site API (undocumented, no auth).
+    // Flow: name → athlete ID (search) → season game log → match date → fields.
+    const ESPN_SEARCH_API = 'https://site.api.espn.com/apis/search/v2';
+    const ESPN_NBA_API    = 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba';
+    const bballFetchBtn  = document.querySelector('#bball-fetch-btn');
+    const bballDateInput = document.querySelector('#bball-date');
+    const bballFetchMsg  = document.querySelector('#bball-fetch-msg');
+    const bballMatchup   = document.querySelector('#bball-matchup');
+    function setBballFetchMsg(msg, type = '') {
+        bballFetchMsg.textContent = msg;
+        bballFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+    /** NBA season is labeled by its ending year (e.g. Oct 2025 - Jun 2026 => season "2026"). */
+    function seasonFromDate(dateStr) {
+        const d = new Date(dateStr);
+        const month = d.getMonth() + 1; // 1-12
+        const year  = d.getFullYear();
+        return month >= 8 ? year + 1 : year;
+    }
+    /** Normalize a UTC gameDate string to an Eastern-Time YYYY-MM-DD string. */
+    function toEasternDateStr(utcDateStr) {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/New_York',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(new Date(utcDateStr));
+    }
+    /** Resolve a player name to their ESPN athlete record (NBA only). */
+    async function resolveEspnAthlete(name) {
+        const res = await fetch(`${ESPN_SEARCH_API}?page=1&query=${encodeURIComponent(name)}`);
+        if (!res.ok) throw new Error('player search request failed');
+        const data = await res.json();
+        const playerBucket = (data.results || []).find(r => r.type === 'player');
+        const candidates = (playerBucket?.contents || [])
+            .filter(p => p.sport === 'basketball' && p.defaultLeagueSlug === 'nba');
+        const target = name.trim().toLowerCase();
+        const match = candidates.find(p => p.displayName.toLowerCase() === target) || candidates[0] || null;
+        if (!match) return null;
+        return {
+            id: match.uid.split('~').pop().replace('a:', ''),
+            fullName: match.displayName,
+            team: match.subtitle,
+        };
+    }
+    /** Find the eventId + metadata (opponent, score, result) matching a target date. */
+    function findEventByDate(gamelog, targetDateStr) {
+        for (const [eventId, ev] of Object.entries(gamelog.events || {})) {
+            if (toEasternDateStr(ev.gameDate) === targetDateStr) return { eventId, meta: ev };
+        }
+        return null;
+    }
+    /** Pull the raw per-game stats array for an eventId out of seasonTypes. */
+    function findStatsArray(gamelog, eventId) {
+        for (const seasonType of gamelog.seasonTypes || []) {
+            for (const category of seasonType.categories || []) {
+                const match = (category.events || []).find(e => e.eventId === eventId);
+                if (match) return match.stats;
+            }
+        }
+        return null;
+    }
+    /** Map a raw stats array to named fields using gamelog.names. */
+    function mapGamelogStats(gamelog, statsArray) {
+        const result = {};
+        gamelog.names.forEach((key, i) => { result[key] = statsArray[i]; });
+        return result;
+    }
+    async function fetchNbaPlayerStats() {
+        const name = document.getElementById('bball-player-name').value.trim();
+        const date = bballDateInput.value; // YYYY-MM-DD
+        if (!name) { setBballFetchMsg('Enter a player name first.', 'error'); return; }
+        if (!date) { setBballFetchMsg('Pick a date first.', 'error'); return; }
+        bballFetchBtn.disabled = true;
+        bballMatchup.textContent = '';
+        setBballFetchMsg('Looking up player…', 'loading');
+        try {
+            const player = await resolveEspnAthlete(name);
+            if (!player) {
+                setBballFetchMsg(`No NBA player matching "${name}".`, 'error');
+                return;
+            }
+            setBballFetchMsg(`Found ${player.fullName}. Fetching game log…`, 'loading');
+            const season = seasonFromDate(date);
+            const res = await fetch(`${ESPN_NBA_API}/athletes/${player.id}/gamelog?season=${season}`);
+            if (!res.ok) throw new Error('game log request failed');
+            const gamelog = await res.json();
+            const eventMatch = findEventByDate(gamelog, date);
+            if (!eventMatch) {
+                setBballFetchMsg(`${player.fullName} has no game log on ${date}.`, 'error');
+                return;
+            }
+            const statsArray = findStatsArray(gamelog, eventMatch.eventId);
+            if (!statsArray) {
+                setBballFetchMsg(`Stats missing for that game.`, 'error');
+                return;
+            }
+            const stats = mapGamelogStats(gamelog, statsArray);
+            bballPts.value  = stats.points;
+            bballRebs.value = stats.totalRebounds;
+            bballAst.value  = stats.assists;
+            bballBlk.value  = stats.blocks;
+            bballStl.value  = stats.steals;
+            bballTo.value   = stats.turnovers;
+            const oppName = eventMatch.meta.opponent?.displayName || '';
+            if (oppName) {
+                bballMatchup.textContent = `vs ${oppName} (${eventMatch.meta.gameResult} ${eventMatch.meta.score})`;
+            }
+            setBballFetchMsg(`Loaded ${player.fullName} — ${date}.`, 'success');
+            bballGoBtn.click(); // auto-calculate
+        } catch (err) {
+            setBballFetchMsg(
+                'Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message,
+                'error'
+            );
+        } finally {
+            bballFetchBtn.disabled = false;
+        }
+    }
+    bballFetchBtn.addEventListener('click', fetchNbaPlayerStats);
     // ========================================================
     //  MLB PITCHER
     // ========================================================
-
     const bsballpTotalEl  = document.querySelector('#bsballp-total-fs');
     const bsballpGoBtn    = document.querySelector('#bsballp-btn');
     const bsballpClearBtn = document.querySelector('#bsballp-clear');
     const bsballpCopyBtn  = document.querySelector('#bsballp-copy');
     const bsballpHeaderEl = document.querySelector('#head-bsballp');
     let   bsballpHzsChk   = document.querySelector('#bsballp-hzs-checkbox');
-
     const bsballpInputs = document.querySelectorAll('.bsballp-fs');
     const bsballpVals   = document.querySelectorAll('.bsballp-val');
-
     const bsballpWinInput = document.getElementById('bsballp-win');
     const bsballpWinChk   = document.getElementById('bsballp-win-checkbox');
     const bsballpQSInput  = document.getElementById('bsballp-qs');
     const bsballpER       = document.getElementById('bsballp-er');
     const bsballpK        = document.getElementById('bsballp-k');
     const bsballpOut      = document.getElementById('bsballp-out');
-
     bsballpGoBtn.addEventListener('click', () => {
-
         // Win (checkbox-driven)
         const winVal = bsballpWinChk.checked ? 6 : 0;
         bsballpWinInput.value = bsballpWinChk.checked ? 1 : 0;
-
         const erVal  = Number(bsballpER.value) * -3;
         const kVal   = Number(bsballpK.value)  * 3;
         const outRaw = Number(bsballpOut.value);
-
         // Convert Innings Pitched (IP) → outs  (e.g. 6.2 IP → 6×3 + 2 = 20 outs)
         const outWhole   = Math.floor(outRaw);
         const outDecimal = Number((outRaw % 1).toFixed(1));
         const outPts     = (outWhole * 3) + (outDecimal * 10);
-
         // Quality Start: ≥ 6 IP and ≤ 3 ER
         const qsVal = (Number(bsballpER.value) <= 3 && Number(bsballpOut.value) >= 6) ? 4 : 0;
         bsballpQSInput.value = qsVal ? 1 : 0;
-
         const total = winVal + qsVal + erVal + kVal + outPts;
-
         document.querySelector('#bsballp-win-val').innerHTML = `= ${winVal}`;
         document.querySelector('#bsballp-qs-val').innerHTML  = `= ${qsVal}`;
         document.querySelector('#bsballp-er-val').innerHTML  = `= ${erVal}`;
         document.querySelector('#bsballp-k-val').innerHTML   = `= ${kVal}`;
         document.querySelector('#bsballp-out-val').innerHTML = `= ${outPts}`;
-
         bsballpTotalEl.innerHTML = total;
         fillEmptyInputs(bsballpInputs);
-
         const statLines = [
             `Win: 6 pts = ${winVal}`,
             `Quality Start: 4 pts = ${qsVal}`,
@@ -242,13 +316,11 @@ window.onload = function () {
             `Strikeout: 3 pt (${bsballpK.value}) = ${kVal}`,
             `Out: 1 pt (${outPts}) = ${outPts}`,
         ];
-
         const bsballpHeader   = buildHeader(document.getElementById('bsballp-player-name').value);
         const bsballpBreakdown = withHeader(bsballpHeader, buildBreakdown(statLines, total));
         showBreakdown('#bsballp-breakdown', '#bsballp-textarea-btn-cont', bsballpBreakdown);
         bsballpHzsChk = setupHideZerosCheckbox(bsballpHzsChk, '#bsballp-breakdown', statLines, bsballpInputs, total, '', bsballpHeader);
     });
-
     bsballpClearBtn.addEventListener('click', () => {
         bsballpInputs.forEach(i => i.value = '');
         bsballpVals.forEach(v => v.innerHTML = '');
@@ -257,26 +329,21 @@ window.onload = function () {
         bsballpTotalEl.innerHTML = '';
         document.querySelector('#bsballp-breakdown').innerHTML = '';
         document.querySelector('#bsballp-textarea-btn-cont').style.display = 'none';
-
         document.getElementById('bsballp-matchup').textContent = '';
         document.getElementById('bsballp-fetch-msg').textContent = '';
     });
-
     bsballpCopyBtn.addEventListener('click',  () => copyBreakdown('#bsballp-breakdown'));
     bsballpHeaderEl.addEventListener('click', () => toggleSection('#content-bsballp'));
-
     // ── MLB Pitcher — Auto-fill from MLB Stats API ────────────────
     // Reuses MLB_API and resolveMlbPlayer() defined in the Hitter section.
     const bsballpFetchBtn  = document.querySelector('#bsballp-fetch-btn');
     const bsballpDateInput = document.querySelector('#bsballp-date');
     const bsballpFetchMsg  = document.querySelector('#bsballp-fetch-msg');
     const bsballpMatchup   = document.querySelector('#bsballp-matchup');
-
     function setPitcherFetchMsg(msg, type = '') {
         bsballpFetchMsg.textContent = msg;
         bsballpFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
     }
-
     // Innings pitched helpers: "6.2" ⇄ total outs (2 outs = 0.2 IP)
     function ipToOuts(ip) {
         const n = Number(ip) || 0;
@@ -287,40 +354,31 @@ window.onload = function () {
     function outsToIp(outs) {
         return `${Math.floor(outs / 3)}.${outs % 3}`;
     }
-
     async function fetchMlbPitcherStats() {
         const name = document.getElementById('bsballp-player-name').value.trim();
         const date = bsballpDateInput.value;
-
         if (!name) { setPitcherFetchMsg('Enter a player name first.', 'error'); return; }
         if (!date) { setPitcherFetchMsg('Pick a date first.', 'error'); return; }
-
         const season = date.slice(0, 4);
         bsballpFetchBtn.disabled = true;
         bsballpMatchup.textContent = '';
         setPitcherFetchMsg('Looking up player…', 'loading');
-
         try {
             const player = await resolveMlbPlayer(name, season);
             if (!player) {
                 setPitcherFetchMsg(`No MLB player matching "${name}" in ${season}.`, 'error');
                 return;
             }
-
             setPitcherFetchMsg(`Found ${player.fullName}. Fetching game log…`, 'loading');
-
             const res = await fetch(`${MLB_API}/people/${player.id}/stats?stats=gameLog&group=pitching&season=${season}`);
             if (!res.ok) throw new Error('game log request failed');
             const data = await res.json();
-
             const splits = data.stats?.[0]?.splits || [];
             const games  = splits.filter(s => s.date === date);
-
             if (games.length === 0) {
                 setPitcherFetchMsg(`${player.fullName} has no pitching log on ${date}.`, 'error');
                 return;
             }
-
             // Aggregate (sums doubleheaders; innings summed via outs)
             const agg = games.reduce((a, g) => {
                 const s = g.stat || {};
@@ -330,23 +388,18 @@ window.onload = function () {
                 a.outs       += ipToOuts(s.inningsPitched);
                 return a;
             }, { earnedRuns:0, strikeOuts:0, wins:0, outs:0 });
-
             // Populate fields — QS and Win points are computed by the Go handler
             bsballpER.value  = agg.earnedRuns;
             bsballpK.value   = agg.strikeOuts;
             bsballpOut.value = outsToIp(agg.outs);
             bsballpWinChk.checked = agg.wins > 0;
-
             const g0 = games[0];
             if (g0.team?.name && g0.opponent?.name) {
                 bsballpMatchup.textContent = `${g0.team.name} vs ${g0.opponent.name}`;
             }
-
             const dhNote = games.length > 1 ? ` (${games.length} games combined)` : '';
             setPitcherFetchMsg(`Loaded ${player.fullName} — ${date}${dhNote}.`, 'success');
-
             bsballpGoBtn.click(); // auto-calculate
-
         } catch (err) {
             setPitcherFetchMsg(
                 'Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message,
@@ -356,24 +409,18 @@ window.onload = function () {
             bsballpFetchBtn.disabled = false;
         }
     }
-
     bsballpFetchBtn.addEventListener('click', fetchMlbPitcherStats);
-
-
     // ========================================================
     //  MLB HITTER
     // ========================================================
-
     const bsballhTotalEl  = document.querySelector('#bsballh-total-fs');
     const bsballhGoBtn    = document.querySelector('#bsballh-btn');
     const bsballhClearBtn = document.querySelector('#bsballh-clear');
     const bsballhCopyBtn  = document.querySelector('#bsballh-copy');
     const bsballhHeaderEl = document.querySelector('#head-bsballh');
     let   bsballhHzsChk   = document.querySelector('#bsballh-hzs-checkbox');
-
     const bsballhInputs = document.querySelectorAll('.bsballh-fs');
     const bsballhVals   = document.querySelectorAll('.bsballh-val');
-
     const bsballhSing = document.getElementById('bsballh-sing');
     const bsballhDoub = document.getElementById('bsballh-doub');
     const bsballhTrip = document.getElementById('bsballh-trip');
@@ -383,11 +430,8 @@ window.onload = function () {
     const bsballhBOB  = document.getElementById('bsballh-bob');
     const bsballhHBP  = document.getElementById('bsballh-hbp');
     const bsballhSB   = document.getElementById('bsballh-sb');
-
     const bsballhMatchup = document.querySelector('#bsballh-matchup');
-
     bsballhGoBtn.addEventListener('click', () => {
-
         const singVal = Number(bsballhSing.value) * 3;
         const doubVal = Number(bsballhDoub.value) * 5;
         const tripVal = Number(bsballhTrip.value) * 8;
@@ -397,9 +441,7 @@ window.onload = function () {
         const bobVal  = Number(bsballhBOB.value)   * 2;
         const hbpVal  = Number(bsballhHBP.value)   * 2;
         const sbVal   = Number(bsballhSB.value)    * 5;
-
         const total = singVal + doubVal + tripVal + hrVal + rVal + rbiVal + bobVal + hbpVal + sbVal;
-
         document.querySelector('#bsballh-sing-val').innerHTML = `= ${singVal}`;
         document.querySelector('#bsballh-doub-val').innerHTML = `= ${doubVal}`;
         document.querySelector('#bsballh-trip-val').innerHTML = `= ${tripVal}`;
@@ -409,10 +451,8 @@ window.onload = function () {
         document.querySelector('#bsballh-bob-val').innerHTML  = `= ${bobVal}`;
         document.querySelector('#bsballh-hbp-val').innerHTML  = `= ${hbpVal}`;
         document.querySelector('#bsballh-sb-val').innerHTML   = `= ${sbVal}`;
-
         bsballhTotalEl.innerHTML = total;
         fillEmptyInputs(bsballhInputs);
-
         const statLines = [
             `Single: 3 pts (${bsballhSing.value}) = ${singVal}`,
             `Double: 5 pts (${bsballhDoub.value}) = ${doubVal}`,
@@ -424,13 +464,11 @@ window.onload = function () {
             `Hit By Pitch: 2 pts (${bsballhHBP.value}) = ${hbpVal}`,
             `Stolen Base: 5 pts (${bsballhSB.value}) = ${sbVal}`,
         ];
-
         const bsballhHeader   = buildHeader(document.getElementById('bsballh-player-name').value);
         const bsballhBreakdown = withHeader(bsballhHeader, buildBreakdown(statLines, total));
         showBreakdown('#bsballh-breakdown', '#bsballh-textarea-btn-cont', bsballhBreakdown);
         bsballhHzsChk = setupHideZerosCheckbox(bsballhHzsChk, '#bsballh-breakdown', statLines, bsballhInputs, total, '', bsballhHeader);
     });
-
     bsballhClearBtn.addEventListener('click', () => {
         bsballhInputs.forEach(i => i.value = '');
         bsballhVals.forEach(v => v.innerHTML = '');
@@ -440,10 +478,8 @@ window.onload = function () {
         document.querySelector('#bsballh-textarea-btn-cont').style.display = 'none';
         document.getElementById('bsballh-matchup').textContent = '';
     });
-
     bsballhCopyBtn.addEventListener('click',  () => copyBreakdown('#bsballh-breakdown'));
     bsballhHeaderEl.addEventListener('click', () => toggleSection('#content-bsballh'));
-
     // ── MLB Hitter — Auto-fill from MLB Stats API ─────────────────
     // Data source: statsapi.mlb.com/api/v1 (official, free, no auth).
     // Flow: name → player ID → hitting game log → match date → fields.
@@ -451,12 +487,10 @@ window.onload = function () {
     const bsballhFetchBtn    = document.querySelector('#bsballh-fetch-btn');
     const bsballhDateInput   = document.querySelector('#bsballh-date');
     const bsballhFetchMsg    = document.querySelector('#bsballh-fetch-msg');
-
     function setHitterFetchMsg(msg, type = '') {
         bsballhFetchMsg.textContent = msg;
         bsballhFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
     }
-
     /** Resolve a player name to their MLB person record for a given season. */
     async function resolveMlbPlayer(name, season) {
         const res = await fetch(`${MLB_API}/sports/1/players?season=${season}`);
@@ -469,41 +503,31 @@ window.onload = function () {
             || people.find(p => p.fullName.toLowerCase().includes(target))
             || null;
     }
-
     async function fetchMlbHitterStats() {
         const name = document.getElementById('bsballh-player-name').value.trim();
         const date = bsballhDateInput.value; // YYYY-MM-DD
-
         if (!name) { setHitterFetchMsg('Enter a player name first.', 'error'); return; }
         if (!date) { setHitterFetchMsg('Pick a date first.', 'error'); return; }
-
         const season = date.slice(0, 4);
         bsballhFetchBtn.disabled = true;
         setHitterFetchMsg('Looking up player…', 'loading');
-
         bsballhMatchup.textContent = '';
-
         try {
             const player = await resolveMlbPlayer(name, season);
             if (!player) {
                 setHitterFetchMsg(`No MLB player matching "${name}" in ${season}.`, 'error');
                 return;
             }
-
             setHitterFetchMsg(`Found ${player.fullName}. Fetching game log…`, 'loading');
-
             const res = await fetch(`${MLB_API}/people/${player.id}/stats?stats=gameLog&group=hitting&season=${season}`);
             if (!res.ok) throw new Error('game log request failed');
             const data = await res.json();
-
             const splits = data.stats?.[0]?.splits || [];
             const games  = splits.filter(s => s.date === date);
-
             if (games.length === 0) {
                 setHitterFetchMsg(`${player.fullName} has no hitting log on ${date}.`, 'error');
                 return;
             }
-
             // Aggregate (sums doubleheaders into one entry)
             const agg = games.reduce((a, g) => {
                 const s = g.stat || {};
@@ -518,9 +542,7 @@ window.onload = function () {
                 a.sb       += s.stolenBases || 0;
                 return a;
             }, { hits:0, doubles:0, triples:0, homeRuns:0, runs:0, rbi:0, bb:0, hbp:0, sb:0 });
-
             const singles = Math.max(0, agg.hits - agg.doubles - agg.triples - agg.homeRuns);
-
             // Populate the hitter fields
             bsballhSing.value = singles;
             bsballhDoub.value = agg.doubles;
@@ -531,20 +553,16 @@ window.onload = function () {
             bsballhBOB.value  = agg.bb;
             bsballhHBP.value  = agg.hbp;
             bsballhSB.value   = agg.sb;
-
             const dhNote = games.length > 1 ? ` (${games.length} games combined)` : '';
             setHitterFetchMsg(`Loaded ${player.fullName} — ${date}${dhNote}.`, 'success');
-
             const g0       = games[0];
             const teamName = g0.team?.name || '';
             const oppName  = g0.opponent?.name || '';
             if (teamName && oppName) {
                 bsballhMatchup.textContent = `${teamName} vs ${oppName}`;
             }
-
             // Auto-calculate
             bsballhGoBtn.click();
-
         } catch (err) {
             setHitterFetchMsg(
                 'Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message,
@@ -554,24 +572,18 @@ window.onload = function () {
             bsballhFetchBtn.disabled = false;
         }
     }
-
     bsballhFetchBtn.addEventListener('click', fetchMlbHitterStats);
-
-
     // ========================================================
     //  TENNIS
     // ========================================================
-
     const tennisTotalEl  = document.querySelector('#tennis-total-fs');
     const tennisGoBtn    = document.querySelector('#tennis-btn');
     const tennisClearBtn = document.querySelector('#tennis-clear');
     const tennisCopyBtn  = document.querySelector('#tennis-copy');
     const tennisHeaderEl = document.querySelector('#head-tennis');
     let   tennisHzsChk   = document.querySelector('#tennis-hzs-checkbox');
-
     const tennisInputs = document.querySelectorAll('.tennis-fs');
     const tennisVals   = document.querySelectorAll('.tennis-val');
-
     // Calculated hidden inputs
     const tennisMP    = document.querySelector('#tennis-mp');
     const tennisGW    = document.querySelector('#tennis-gw');
@@ -580,18 +592,15 @@ window.onload = function () {
     const tennisSL    = document.querySelector('#tennis-sl');
     const tennisAce   = document.querySelector('#tennis-ac');
     const tennisDblFt = document.querySelector('#tennis-dblft');
-
     // Box score inputs — player sets
     const playerSets   = [1, 2, 3, 4, 5].map(n => document.querySelector(`#tennis-box-player-s${n}`));
     const opponentSets = [1, 2, 3, 4, 5].map(n => document.querySelector(`#tennis-box-opponent-s${n}`));
-
     // Retirement controls
     const retirementChk       = document.querySelector('#tennis-bs-retirement'); // legacy shim
     const oppRetiredChk       = document.querySelector('#tennis-opp-retired');
     const playerRetiredChk    = document.querySelector('#tennis-player-retired');
     const playerRetiredRadio  = document.querySelector('#tennis-bs-p-retired');
     const opponentRetiredRadio= document.querySelector('#tennis-bs-o-retired');
-
     // Mutual exclusion — checking one unchecks the other
     oppRetiredChk.addEventListener('change', () => {
         if (oppRetiredChk.checked) playerRetiredChk.checked = false;
@@ -599,37 +608,28 @@ window.onload = function () {
     playerRetiredChk.addEventListener('change', () => {
         if (playerRetiredChk.checked) oppRetiredChk.checked = false;
     });
-
     tennisGoBtn.addEventListener('click', () => {
-
         let pScores = playerSets.map(el   => Number(el.value || 0));
         let oScores = opponentSets.map(el => Number(el.value || 0));
-
         // ── Retirement logic ──────────────────────────────────────────
         // Rule: only applies if Set 1 is fully complete.
         // The retiring player's opponent gets filled as the winner.
         // Ace / Double Fault are never touched here.
-
         const oppRetired    = oppRetiredChk.checked;
         const playerRetired = playerRetiredChk.checked;
         const retirementChecked = oppRetired || playerRetired;
-
         const format    = Number(document.querySelector('input[name="tennis-format"]:checked')?.value || 3);
         const setsToWin = Math.ceil(format / 2); // 2 for BO3, 3 for BO5
-
         /** True if a set score pair represents a completed set. */
         function setComplete(p, o) { return p >= 6 || o >= 6; }
-
         /** 6 normally; 7 if the in-progress set is already at 5-5 or beyond. */
         function winningScore(w, l) { return (w >= 5 && l >= 5) ? 7 : 6; }
-
         /**
          * Fill sets for the winning side after a retirement.
          * winnerScores / loserScores are the raw arrays, mutated in place.
          */
         function applyRetirement(winnerScores, loserScores) {
             if (!setComplete(winnerScores[0], loserScores[0])) return; // Set 1 must be done
-
             // Step 1 — find and fill the first incomplete set
             let retiredAtSet = -1;
             for (let i = 0; i < format; i++) {
@@ -638,13 +638,11 @@ window.onload = function () {
             if (retiredAtSet !== -1) {
                 winnerScores[retiredAtSet] = winningScore(winnerScores[retiredAtSet], loserScores[retiredAtSet]);
             }
-
             // Step 2 — count winner's set wins after that fill
             let winnerSetWins = 0;
             for (let i = 0; i < format; i++) {
                 if (setComplete(winnerScores[i], loserScores[i]) && winnerScores[i] > loserScores[i]) winnerSetWins++;
             }
-
             // Step 3 — fill 6-0 until winner reaches setsToWin; zero the rest
             const startFrom = retiredAtSet === -1 ? format : retiredAtSet + 1;
             for (let i = startFrom; i < format; i++) {
@@ -653,10 +651,8 @@ window.onload = function () {
             }
             for (let i = format; i < 5; i++) { winnerScores[i] = 0; loserScores[i] = 0; }
         }
-
         if (oppRetired)    applyRetirement(pScores, oScores); // opponent retired → player wins
         if (playerRetired) applyRetirement(oScores, pScores); // player retired    → opponent wins
-
         if (retirementChecked) {
             // Write adjusted scores back to input boxes
             let lastSet = -1;
@@ -666,11 +662,9 @@ window.onload = function () {
             playerSets.forEach((el, i)   => { el.value = i <= lastSet ? pScores[i] : ''; });
             opponentSets.forEach((el, i) => { el.value = i <= lastSet ? oScores[i] : ''; });
         }
-
         // ── Tally games won / lost ────────────────────────────────────
         const gamesWon  = pScores.slice(0, format).reduce((sum, v) => sum + v, 0);
         const gamesLost = oScores.slice(0, format).reduce((sum, v) => sum + v, 0);
-
         // ── Tally sets won / lost ─────────────────────────────────────
         let setsWon = 0, setsLost = 0;
         for (let i = 0; i < format; i++) {
@@ -678,13 +672,11 @@ window.onload = function () {
             if      (pScores[i] > oScores[i]) setsWon++;
             else if (pScores[i] < oScores[i]) setsLost++;
         }
-
         // Write computed values to hidden inputs
         tennisGW.value = gamesWon;
         tennisGL.value = gamesLost;
         tennisSW.value = String(setsWon);
         tennisSL.value = String(setsLost);
-
         const mpVal    = Number(tennisMP.value) * 10;
         const gwVal    = gamesWon  * 1;
         const glVal    = gamesLost * -1;
@@ -692,15 +684,11 @@ window.onload = function () {
         const slVal    = setsLost  * -3;
         const aceVal   = Number(tennisAce.value)   * 0.5;
         const dblftVal = Number(tennisDblFt.value) * -0.5;
-
         const total = mpVal + gwVal + glVal + swVal + slVal + aceVal + dblftVal;
-
         document.querySelector('#tennis-ac-val').innerHTML    = `= ${aceVal}`;
         document.querySelector('#tennis-dblft-val').innerHTML = `= ${dblftVal}`;
-
         tennisTotalEl.innerHTML = total;
         fillEmptyInputs(tennisInputs);
-
         const statLines = [
             `Match Played: 10 pts (${tennisMP.value}) = ${mpVal}`,
             `Game Win: 1 pt (${gamesWon}) = ${gwVal}`,
@@ -710,9 +698,7 @@ window.onload = function () {
             `Ace: 0.5 pt (${tennisAce.value}) = ${aceVal}`,
             `Double Fault: -0.5 pt (${tennisDblFt.value}) = ${dblftVal}`,
         ];
-
         const tennisHeader = buildHeader(document.getElementById('tennis-player-name').value);
-
         // DNP: retirement checked but Set 1 not complete → show DNP only
         const isDNP = retirementChecked && !setComplete(pScores[0], oScores[0]);
         if (isDNP) {
@@ -721,13 +707,11 @@ window.onload = function () {
             tennisTotalEl.innerHTML = 'DNP';
             return;
         }
-
         const retirementNote = retirementChecked ? '[Retirement — scores adjusted per PrizePicks rule]' : '';
         const tennisBreakdown = withHeader(tennisHeader, buildBreakdown(statLines, total, retirementNote));
         showBreakdown('#tennis-breakdown', '#tennis-textarea-btn-cont', tennisBreakdown);
         tennisHzsChk = setupHideZerosCheckbox(tennisHzsChk, '#tennis-breakdown', statLines, tennisInputs, total, retirementNote, tennisHeader);
     });
-
     tennisClearBtn.addEventListener('click', () => {
         tennisInputs.forEach(inp => {
             if (inp.id === 'tennis-mp') return; // keep Match Played = 1
@@ -742,31 +726,24 @@ window.onload = function () {
         document.querySelector('#tennis-breakdown').innerHTML = '';
         document.querySelector('#tennis-textarea-btn-cont').style.display = 'none';
     });
-
     tennisCopyBtn.addEventListener('click',  () => copyBreakdown('#tennis-breakdown'));
     tennisHeaderEl.addEventListener('click', () => toggleSection('#content-tennis'));
-
-
     // ========================================================
     //  MMA
     // ========================================================
-
     const mmaTotalEl  = document.querySelector('#mma-total-fs');
     const mmaGoBtn    = document.querySelector('#mma-btn');
     const mmaClearBtn = document.querySelector('#mma-clear');
     const mmaCopyBtn  = document.querySelector('#mma-copy');
     const mmaHeaderEl = document.querySelector('#head-mma');
     let   mmaHzsChk   = document.querySelector('#mma-hzs-checkbox');
-
     const mmaInputs = document.querySelectorAll('.mma-fs');
     const mmaVals   = document.querySelectorAll('.mma-val');
     const mmaRadios = document.querySelectorAll('.mma-fcb');
-
     const mmaSigStr = document.querySelector('#mma-sigstr');
     const mmaTD     = document.querySelector('#mma-td');
     const mmaSubAtt = document.querySelector('#mma-subatt');
     const mmaKD     = document.querySelector('#mma-kd');
-
     // Map radio point values → readable label
     const MMA_FCB_LABELS = {
         50: '1st Round Win = 50 pts',
@@ -776,40 +753,31 @@ window.onload = function () {
         10: 'Decision Win = 10 pts',
          0: 'Draw = 0 pt',
     };
-
     mmaGoBtn.addEventListener('click', () => {
-
         const sigStrVal = Number(mmaSigStr.value) * 0.5;
         const tdVal     = Number(mmaTD.value)     * 5;
         const subAttVal = Number(mmaSubAtt.value) * 4;
         const kdVal     = Number(mmaKD.value)     * 10;
-
         const fcbVal   = getCheckedRadioValue(mmaRadios);
         const fcbLabel = MMA_FCB_LABELS[fcbVal] ?? '';
-
         const total = sigStrVal + tdVal + subAttVal + kdVal + fcbVal;
-
         document.querySelector('#mma-sigstr-val').innerHTML = `= ${sigStrVal}`;
         document.querySelector('#mma-td-val').innerHTML     = `= ${tdVal}`;
         document.querySelector('#mma-subatt-val').innerHTML = `= ${subAttVal}`;
         document.querySelector('#mma-kd-val').innerHTML     = `= ${kdVal}`;
-
         mmaTotalEl.innerHTML = total;
         fillEmptyInputs(mmaInputs);
-
         const statLines = [
             `Significant Strikes: 0.5 pts (${mmaSigStr.value}) = ${sigStrVal}`,
             `Takedown: 5 pts (${mmaTD.value}) = ${tdVal}`,
             `Submission Attempt: 4 pts (${mmaSubAtt.value}) = ${subAttVal}`,
             `Knockdown: 10 pts (${mmaKD.value}) = ${kdVal}`,
         ];
-
         const mmaHeader   = buildHeader(document.getElementById('mma-player-name').value);
         const mmaBreakdown = withHeader(mmaHeader, buildBreakdown(statLines, total, fcbLabel));
         showBreakdown('#mma-breakdown', '#mma-textarea-btn-cont', mmaBreakdown);
         mmaHzsChk = setupHideZerosCheckbox(mmaHzsChk, '#mma-breakdown', statLines, mmaInputs, total, fcbLabel, mmaHeader);
     });
-
     mmaClearBtn.addEventListener('click', () => {
         mmaInputs.forEach(i => i.value = '');
         mmaVals.forEach(v => v.innerHTML = '');
@@ -819,30 +787,23 @@ window.onload = function () {
         document.querySelector('#mma-breakdown').innerHTML = '';
         document.querySelector('#mma-textarea-btn-cont').style.display = 'none';
     });
-
     mmaCopyBtn.addEventListener('click',  () => copyBreakdown('#mma-breakdown'));
     mmaHeaderEl.addEventListener('click', () => toggleSection('#content-mma'));
-
-
     // ========================================================
     //  BOXING
     // ========================================================
-
     const boxTotalEl  = document.querySelector('#box-total-fs');
     const boxGoBtn    = document.querySelector('#box-btn');
     const boxClearBtn = document.querySelector('#box-clear');
     const boxCopyBtn  = document.querySelector('#box-copy');
     const boxHeaderEl = document.querySelector('#head-box');
     let   boxHzsChk   = document.querySelector('#box-hzs-checkbox');
-
     const boxInputs = document.querySelectorAll('.box-fs');
     const boxVals   = document.querySelectorAll('.box-val');
     const boxRadios = document.querySelectorAll('.box-fcb');
-
     const boxPunch   = document.querySelector('#box-punch');
     const boxKD      = document.querySelector('#box-kd');
     const boxBeingKD = document.querySelector('#box-beingkd');
-
     // Map radio point values → readable label
     const BOX_FCB_LABELS = {
         100: 'Win Within Rounds 1-2 = 100 pts',
@@ -851,37 +812,28 @@ window.onload = function () {
          25: 'Win Within Rounds 11-12 = 25 pts',
          20: 'Decision Win = 20 pts',
     };
-
     boxGoBtn.addEventListener('click', () => {
-
         const punchVal   = Number(boxPunch.value)   * 0.5;
         const kdVal      = Number(boxKD.value)      * 12;
         const beingKdVal = Number(boxBeingKD.value) * -12;
-
         const fcbVal   = getCheckedRadioValue(boxRadios);
         const fcbLabel = BOX_FCB_LABELS[fcbVal] ?? '';
-
         const total = punchVal + kdVal + beingKdVal + fcbVal;
-
         document.querySelector('#box-punch-val').innerHTML   = `= ${punchVal}`;
         document.querySelector('#box-kd-val').innerHTML      = `= ${kdVal}`;
         document.querySelector('#box-beingkd-val').innerHTML = `= ${beingKdVal}`;
-
         boxTotalEl.innerHTML = total;
         fillEmptyInputs(boxInputs);
-
         const statLines = [
             `Punch Landed: 0.5 pts (${boxPunch.value}) = ${punchVal}`,
             `Knockdown on Opponent: 12 pts (${boxKD.value}) = ${kdVal}`,
             `Being Knocked Down by Opponent: -12 pts (${boxBeingKD.value}) = ${beingKdVal}`,
         ];
-
         const boxHeader   = buildHeader(document.getElementById('box-player-name').value);
         const boxBreakdown = withHeader(boxHeader, buildBreakdown(statLines, total, fcbLabel));
         showBreakdown('#box-breakdown', '#box-textarea-btn-cont', boxBreakdown);
         boxHzsChk = setupHideZerosCheckbox(boxHzsChk, '#box-breakdown', statLines, boxInputs, total, fcbLabel, boxHeader);
     });
-
     boxClearBtn.addEventListener('click', () => {
         boxInputs.forEach(i => i.value = '');
         boxVals.forEach(v => v.innerHTML = '');
@@ -891,25 +843,19 @@ window.onload = function () {
         document.querySelector('#box-breakdown').innerHTML = '';
         document.querySelector('#box-textarea-btn-cont').style.display = 'none';
     });
-
     boxCopyBtn.addEventListener('click',  () => copyBreakdown('#box-breakdown'));
     boxHeaderEl.addEventListener('click', () => toggleSection('#content-box'));
-
-
     // ========================================================
     //  NFL / CFB OFFENSIVE
     // ========================================================
-
     const fballoTotalEl  = document.querySelector('#fballo-total-fs');
     const fballoGoBtn    = document.querySelector('#fballo-btn');
     const fbálloClearBtn = document.querySelector('#fballo-clear');
     const fbálloCopyBtn  = document.querySelector('#fballo-copy');
     const fballoHeaderEl = document.querySelector('#head-fballo');
     let   fballoHzsChk   = document.querySelector('#fballo-hzs-checkbox');
-
     const fballoInputs = document.querySelectorAll('.fballo-fs');
     const fballoVals   = document.querySelectorAll('.fballo-val');
-
     const fballoPassYd  = document.getElementById('fballo-passyd');
     const fballoPassTD  = document.getElementById('fballo-passtd');
     const fballoInt     = document.getElementById('fballo-int');
@@ -922,9 +868,7 @@ window.onload = function () {
     const fballo2Ptc    = document.getElementById('fballo-2ptc');
     const fballoOFRT    = document.getElementById('fballo-ofrt');
     const fballoKPFGRTD = document.getElementById('fballo-kpfgrtd');
-
     fballoGoBtn.addEventListener('click', () => {
-
         const passYdVal  = Number((Number(fballoPassYd.value)  * 0.04).toFixed(2));
         const passTDVal  = Number(fballoPassTD.value)  * 4;
         const intVal     = Number(fballoInt.value)     * -1;
@@ -937,14 +881,12 @@ window.onload = function () {
         const twoPtcVal  = Number(fballo2Ptc.value)    * 2;
         const ofrtVal    = Number(fballoOFRT.value)    * 6;
         const kpfgrtdVal = Number(fballoKPFGRTD.value) * 6;
-
         const total = Number((
             passYdVal + passTDVal + intVal +
             rushYdVal + rushTDVal +
             recYdVal  + recTDVal  + recVal +
             flVal + twoPtcVal + ofrtVal + kpfgrtdVal
         ).toFixed(2));
-
         document.querySelector('#fballo-passyd-val').innerHTML   = `= ${passYdVal}`;
         document.querySelector('#fballo-passtd-val').innerHTML   = `= ${passTDVal}`;
         document.querySelector('#fballo-int-val').innerHTML      = `= ${intVal}`;
@@ -957,10 +899,8 @@ window.onload = function () {
         document.querySelector('#fballo-2ptc-val').innerHTML     = `= ${twoPtcVal}`;
         document.querySelector('#fballo-ofrt-val').innerHTML     = `= ${ofrtVal}`;
         document.querySelector('#fballo-kpfgrtd-val').innerHTML  = `= ${kpfgrtdVal}`;
-
         fballoTotalEl.innerHTML = total;
         fillEmptyInputs(fballoInputs);
-
         const statLines = [
             `Passing Yards: 0.04 pts/yard (${fballoPassYd.value}) = ${passYdVal}`,
             `Passing TDs: 4 pts (${fballoPassTD.value}) = ${passTDVal}`,
@@ -975,7 +915,6 @@ window.onload = function () {
             `Offensive Fumble Recovery Touchdown: 6 pts (${fballoOFRT.value}) = ${ofrtVal}`,
             `Kick/Punt/Field Goal Return Touchdown: 6 pts (${fballoKPFGRTD.value}) = ${kpfgrtdVal}`,
         ];
-
         const fballoHeader   = buildHeader(
             document.getElementById('fballo-player-name').value,
             document.querySelector('input[name="fballo-period"]:checked')?.value
@@ -984,7 +923,6 @@ window.onload = function () {
         showBreakdown('#fballo-breakdown', '#fballo-textarea-btn-cont', fballoBreakdown);
         fballoHzsChk = setupHideZerosCheckbox(fballoHzsChk, '#fballo-breakdown', statLines, fballoInputs, total, '', fballoHeader);
     });
-
     fbálloClearBtn.addEventListener('click', () => {
         fballoInputs.forEach(i => i.value = '');
         fballoVals.forEach(v => v.innerHTML = '');
@@ -993,26 +931,20 @@ window.onload = function () {
         document.querySelector('#fballo-breakdown').innerHTML = '';
         document.querySelector('#fballo-textarea-btn-cont').style.display = 'none';
     });
-
     fbálloCopyBtn.addEventListener('click',  () => copyBreakdown('#fballo-breakdown'));
     fballoHeaderEl.addEventListener('click', () => toggleSection('#content-fballo'));
-
-
     // ========================================================
     //  NFL DST (currently hidden in the UI)
     // ========================================================
-
     const fballdTotalEl  = document.querySelector('#fballd-total-fs');
     const fballdGoBtn    = document.querySelector('#fballd-btn');
     const fballdClearBtn = document.querySelector('#fballd-clear');
     const fballdCopyBtn  = document.querySelector('#fballd-copy');
     const fballdHeaderEl = document.querySelector('#head-fballd');
     let   fballdHzsChk   = document.querySelector('#fballd-hzs-checkbox');
-
     const fballdInputs = document.querySelectorAll('.fballd-fs');
     const fballdVals   = document.querySelectorAll('.fballd-val');
     const fballdRads   = document.querySelectorAll('.fballd-pa');
-
     const fballdSack    = document.getElementById('fballd-sac');
     const fballdInt     = document.getElementById('fballd-int');
     const fballdFumbRec = document.getElementById('fballd-fumbrec');
@@ -1023,7 +955,6 @@ window.onload = function () {
     const fballdSafety  = document.getElementById('fballd-saf');
     const fballdBlkKick = document.getElementById('fballd-blkkick');
     const fballd2PtConv = document.getElementById('fballd-2ptconv');
-
     // Map points-allowed radio values → readable label
     const DST_PA_LABELS = {
         10: '0 Point Allowed = 10 pts',
@@ -1034,9 +965,7 @@ window.onload = function () {
         '-1': '28-34 Points Allowed = -1 pt',
         '-4': '35+ Points Allowed = -4 pt',
     };
-
     fballdGoBtn.addEventListener('click', () => {
-
         const sackVal    = Number(fballdSack.value)    * 1;
         const intVal     = Number(fballdInt.value)     * 2;
         const fumbRecVal = Number(fballdFumbRec.value) * 2;
@@ -1047,13 +976,10 @@ window.onload = function () {
         const safVal     = Number(fballdSafety.value)  * 2;
         const blkKickVal = Number(fballdBlkKick.value) * 2;
         const twoPtConvVal= Number(fballd2PtConv.value)* 2;
-
         let paVal   = getCheckedRadioValue(fballdRads) || 0;
         const paLabel = DST_PA_LABELS[paVal] ?? '';
-
         const total = sackVal + intVal + fumbRecVal + pkfgrtdVal + intRetTDVal +
                       fumbRTDVal + blkPuntVal + safVal + blkKickVal + twoPtConvVal + paVal;
-
         document.querySelector('#fballd-sac-val').innerHTML      = `= ${sackVal}`;
         document.querySelector('#fballd-int-val').innerHTML      = `= ${intVal}`;
         document.querySelector('#fballd-fumbrec-val').innerHTML  = `= ${fumbRecVal}`;
@@ -1064,10 +990,8 @@ window.onload = function () {
         document.querySelector('#fballd-saf-val').innerHTML      = `= ${safVal}`;
         document.querySelector('#fballd-blkkick-val').innerHTML  = `= ${blkKickVal}`;
         document.querySelector('#fballd-2ptconv-val').innerHTML  = `= ${twoPtConvVal}`;
-
         fballdTotalEl.innerHTML = total;
         fillEmptyInputs(fballdInputs);
-
         const statLines = [
             `Sack: 1 pt (${fballdSack.value}) = ${sackVal}`,
             `Interception: 2 pts (${fballdInt.value}) = ${intVal}`,
@@ -1080,11 +1004,9 @@ window.onload = function () {
             `Blocked Kick: 2 pts (${fballdBlkKick.value}) = ${blkKickVal}`,
             `2 Point Conversions/Extra Point Returns: 2 pts (${fballd2PtConv.value}) = ${twoPtConvVal}`,
         ];
-
         showBreakdown('#fballd-breakdown', '#fballd-textarea-btn-cont', buildBreakdown(statLines, total, paLabel));
         fballdHzsChk = setupHideZerosCheckbox(fballdHzsChk, '#fballd-breakdown', statLines, fballdInputs, total, paLabel);
     });
-
     fballdClearBtn.addEventListener('click', () => {
         fballdInputs.forEach(i => i.value = '');
         fballdVals.forEach(v => v.innerHTML = '');
@@ -1093,30 +1015,23 @@ window.onload = function () {
         document.querySelector('#fballd-breakdown').innerHTML = '';
         document.querySelector('#fballd-textarea-btn-cont').style.display = 'none';
     });
-
     fballdCopyBtn.addEventListener('click',  () => copyBreakdown('#fballd-breakdown'));
     fballdHeaderEl.addEventListener('click', () => toggleSection('#content-fballd'));
-
-
     // ========================================================
     //  NASCAR (currently hidden in the UI)
     // ========================================================
-
     const nascarTotalEl  = document.querySelector('#nascar-total-fs');
     const nascarGoBtn    = document.querySelector('#nascar-btn');
     const nascarClearBtn = document.querySelector('#nascar-clear');
     const nascarCopyBtn  = document.querySelector('#nascar-copy');
     const nascarHeaderEl = document.querySelector('#head-nascar');
     let   nascarHzsChk   = document.querySelector('#nascar-hzs-checkbox');
-
     const nascarInputs = document.querySelectorAll('.nascar-fs');
     const nascarVals   = document.querySelectorAll('.nascar-val');
     const nascarRads   = document.querySelectorAll('.nascar-fpp');
-
     const nascarPD = document.querySelector('#nascar-pd');
     const nascarFL = document.querySelector('#nascar-fl');
     const nascarLL = document.querySelector('#nascar-ll');
-
     // Map finishing-place radio values → readable label
     const NASCAR_PLACE_LABELS = {
         45: '1st Place: 45 pts',  42: '2nd Place: 42 pts',  41: '3rd Place: 41 pts',
@@ -1134,36 +1049,26 @@ window.onload = function () {
          4: '37th Place: 4 pts',   3: '38th Place: 3 pts',   2: '39th Place: 2 pts',
          1: '40th Place: 1 pt',    0: '41st Place or Worse: 0 pt',
     };
-
     nascarGoBtn.addEventListener('click', () => {
-
         fillEmptyInputs(nascarInputs);
-
         const pdVal = Number(nascarPD.value) * 1;
         const flVal = Number(nascarFL.value) * 0.45;
         const llVal = Number(nascarLL.value) * 0.25;
-
         const fppVal   = getCheckedRadioValue(nascarRads);
         const fppLabel = NASCAR_PLACE_LABELS[fppVal] ?? '';
-
         const total = pdVal + flVal + llVal + fppVal;
-
         document.querySelector('#nascar-pd-val').innerHTML = `= ${pdVal}`;
         document.querySelector('#nascar-fl-val').innerHTML = `= ${flVal}`;
         document.querySelector('#nascar-ll-val').innerHTML = `= ${llVal}`;
-
         nascarTotalEl.innerHTML = total;
-
         const statLines = [
             `Place Differential: +/- 1 pt (${nascarPD.value}) = ${pdVal}`,
             `Fastest Laps: 0.45 pt/lap (${nascarFL.value}) = ${flVal}`,
             `Laps Lead: 0.25 pt/lap (${nascarLL.value}) = ${llVal}`,
         ];
-
         showBreakdown('#nascar-breakdown', '#nascar-textarea-btn-cont', buildBreakdown(statLines, total, fppLabel));
         nascarHzsChk = setupHideZerosCheckbox(nascarHzsChk, '#nascar-breakdown', statLines, nascarInputs, total, fppLabel);
     });
-
     nascarClearBtn.addEventListener('click', () => {
         nascarInputs.forEach(i => i.value = '');
         nascarVals.forEach(v => v.innerHTML = '');
@@ -1172,8 +1077,6 @@ window.onload = function () {
         document.querySelector('#nascar-breakdown').innerHTML = '';
         document.querySelector('#nascar-textarea-btn-cont').style.display = 'none';
     });
-
     nascarCopyBtn.addEventListener('click',  () => copyBreakdown('#nascar-breakdown'));
     nascarHeaderEl.addEventListener('click', () => toggleSection('#content-nascar'));
-
 }; // end window.onload

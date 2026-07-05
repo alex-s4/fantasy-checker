@@ -55,14 +55,24 @@
         <div class="card-body" id="content-bball">
 
           <!-- Player name + period -->
-          <input type="text" id="bball-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
-          <div class="round-pill-group period-selector" style="margin-bottom:.85rem">
+          <input type="text" id="bball-player-name" class="stat-input player-name-input" placeholder="Player name">
+
+          <!-- <div class="round-pill-group period-selector" style="margin-bottom:.85rem">
             <label class="round-pill" style="width:74px"><input type="radio" name="bball-period" value="Full Game" checked> Full Game</label>
             <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="1Q"> 1Q</label>
             <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="4Q"> 4Q</label>
             <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="1H"> 1H</label>
             <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="2H"> 2H</label>
+          </div> -->
+
+          <div class="fetch-row">
+            <input type="date" id="bball-date" class="stat-input" style="width:auto">
+            <button id="bball-fetch-btn" class="btn btn-secondary">
+              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill
+            </button>
           </div>
+          <p id="bball-fetch-msg" class="fetch-msg"></p>
+          <p id="bball-matchup" class="matchup-line"></p>
 
           <!-- Modal trigger -->
           <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#basketballModal">
@@ -137,12 +147,12 @@
 
         <div class="card-body" id="content-bsballp">
 
-          <input type="text" id="bsballp-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
+          <input type="text" id="bsballp-player-name" class="stat-input player-name-input" placeholder="Player name">
 
           <div class="fetch-row">
             <input type="date" id="bsballp-date" class="stat-input" style="width:auto">
             <button id="bsballp-fetch-btn" class="btn btn-secondary">
-              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill from MLB
+              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill
             </button>
           </div>
           <p id="bsballp-fetch-msg" class="fetch-msg"></p>
@@ -238,12 +248,12 @@
 
         <div class="card-body" id="content-bsballh">
 
-          <input type="text" id="bsballh-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
+          <input type="text" id="bsballh-player-name" class="stat-input player-name-input" placeholder="Player name">
 
           <div class="fetch-row">
             <input type="date" id="bsballh-date" class="stat-input" style="width:auto">
             <button id="bsballh-fetch-btn" class="btn btn-secondary">
-              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill from MLB
+              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill
             </button>
           </div>
           <p id="bsballh-fetch-msg" class="fetch-msg"></p>
@@ -336,7 +346,7 @@
 
         <div class="card-body" id="content-tennis">
 
-          <input type="text" id="tennis-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
+          <input type="text" id="tennis-player-name" class="stat-input player-name-input" placeholder="Player name">
 
           <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#tennisModal">
             <i class="fa-regular fa-circle-question"></i> How to check?
@@ -444,7 +454,7 @@
 
         <div class="card-body" id="content-mma">
 
-          <input type="text" id="mma-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
+          <input type="text" id="mma-player-name" class="stat-input player-name-input" placeholder="Player name">
 
           <table class="stat-table">
             <tr>
@@ -511,7 +521,7 @@
 
         <div class="card-body" id="content-box">
 
-          <input type="text" id="box-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
+          <input type="text" id="box-player-name" class="stat-input player-name-input" placeholder="Player name">
 
           <table class="stat-table">
             <tr>
@@ -569,13 +579,13 @@
       <div class="calc-card calc-card--wide">
         <div class="card-header" id="head-fballo">
           <img alt="NFL" src="https://static.prizepicks.com/images/leagues/production/30.svg" class="league-icon">
-          <h3>NFL / CFB Offensive FS</h3>
+          <h3>Football FS</h3>
           <i class="fa-solid fa-chevron-down collapse-icon"></i>
         </div>
 
         <div class="card-body" id="content-fballo">
 
-          <input type="text" id="fballo-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
+          <input type="text" id="fballo-player-name" class="stat-input player-name-input" placeholder="Player name">
           <div class="round-pill-group period-selector" style="margin-bottom:.85rem">
             <label class="round-pill" style="width:74px"><input type="radio" name="fballo-period" value="Full Game" checked> Full Game</label>
             <label class="round-pill" style="width:42px"><input type="radio" name="fballo-period" value="1Q"> 1Q</label>
