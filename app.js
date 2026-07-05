@@ -148,6 +148,12 @@ window.onload = function () {
         document.querySelector('#bball-textarea-btn-cont').style.display = 'none';
         document.getElementById('bball-matchup').textContent = '';
         document.getElementById('bball-fetch-msg').textContent = '';
+        bballGameSelect.innerHTML = '';
+        bballTeamSelect.innerHTML = '';
+        bballPlayerSelect.innerHTML = '';
+        bballGameRow.style.display = 'none';
+        bballTeamRow.style.display = 'none';
+        bballPlayerRow.style.display = 'none';
     });
     bballCopyBtn.addEventListener('click',   () => copyBreakdown('#bball-breakdown'));
     bballHeaderEl.addEventListener('click',  () => toggleSection('#content-bball'));
@@ -270,6 +276,170 @@ window.onload = function () {
         }
     }
     bballFetchBtn.addEventListener('click', fetchNbaPlayerStats);
+
+    // ── Basketball — Browse by date/league/team/player (drill-down alternative) ──
+        const bballLoadGamesBtn = document.querySelector('#bball-load-games-btn');
+        const bballGameRow      = document.querySelector('#bball-game-row');
+        const bballGameSelect   = document.querySelector('#bball-game-select');
+        const bballTeamRow      = document.querySelector('#bball-team-row');
+        const bballTeamSelect   = document.querySelector('#bball-team-select');
+
+        let bballScoreboardCache = null; // last fetched scoreboard response, keyed for lookup on game-select change
+
+        function getSelectedBballLeague() {
+            return document.querySelector('input[name="bball-league"]:checked')?.value || 'nba';
+        }
+
+        /** Convert an <input type="date"> value (YYYY-MM-DD) to ESPN's YYYYMMDD format. */
+        function toEspnDateParam(dateStr) {
+            return dateStr.replaceAll('-', '');
+        }
+
+        async function loadBballGames() {
+            const date = bballDateInput.value;
+            if (!date) { setBballFetchMsg('Pick a date first.', 'error'); return; }
+
+            const league = getSelectedBballLeague();
+            bballLoadGamesBtn.disabled = true;
+            bballGameRow.style.display = 'none';
+            bballTeamRow.style.display = 'none';
+            bballGameSelect.innerHTML = '';
+            bballTeamSelect.innerHTML = '';
+            setBballFetchMsg('Loading games…', 'loading');
+
+            try {
+                const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/${league}/scoreboard?dates=${toEspnDateParam(date)}`);
+                if (!res.ok) throw new Error('scoreboard request failed');
+                const data = await res.json();
+                bballScoreboardCache = data;
+
+                const events = data.events || [];
+                if (events.length === 0) {
+                    setBballFetchMsg(`No games found on ${date}.`, 'error');
+                    return;
+                }
+
+                bballGameSelect.innerHTML = '<option value="">Select a game…</option>' +
+                    events.map(ev => `<option value="${ev.id}">${ev.shortName || ev.name}</option>`).join('');
+                bballGameRow.style.display = 'flex';
+                setBballFetchMsg(`Found ${events.length} game(s) on ${date}.`, 'success');
+            } catch (err) {
+                setBballFetchMsg(
+                    'Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message,
+                    'error'
+                );
+            } finally {
+                bballLoadGamesBtn.disabled = false;
+            }
+        }
+        bballLoadGamesBtn.addEventListener('click', loadBballGames);
+
+        bballGameSelect.addEventListener('change', () => {
+            const eventId = bballGameSelect.value;
+            bballTeamSelect.innerHTML = '';
+            bballTeamRow.style.display = 'none';
+            if (!eventId || !bballScoreboardCache) return;
+
+            const event = bballScoreboardCache.events.find(ev => ev.id === eventId);
+            const competitors = event?.competitions?.[0]?.competitors || [];
+            if (competitors.length === 0) return;
+
+            bballTeamSelect.innerHTML = '<option value="">Select a team…</option>' +
+                competitors.map(c => `<option value="${c.team.id}">${c.team.displayName}</option>`).join('');
+            bballTeamRow.style.display = 'flex';
+        });
+
+        const bballPlayerRow    = document.querySelector('#bball-player-row');
+            const bballPlayerSelect = document.querySelector('#bball-player-select');
+
+            const bballBoxscoreCache = {}; // eventId -> boxscore.players[], cached so switching teams doesn't re-fetch
+
+            async function fetchBballBoxscore(eventId) {
+                if (bballBoxscoreCache[eventId]) return bballBoxscoreCache[eventId];
+                const league = getSelectedBballLeague();
+                const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/${league}/summary?event=${eventId}`);
+                if (!res.ok) throw new Error('boxscore request failed');
+                const data = await res.json();
+                const players = data.boxscore?.players || [];
+                bballBoxscoreCache[eventId] = players;
+                return players;
+            }
+
+            /** Build a "vs Opponent (W/L 94-90)" line from the cached scoreboard event + the selected team's id. */
+            function buildBballMatchupLine(event, teamId) {
+                const competitors = event?.competitions?.[0]?.competitors || [];
+                const mine = competitors.find(c => c.team.id === teamId);
+                const opp  = competitors.find(c => c.team.id !== teamId);
+                if (!mine || !opp) return '';
+                const result = mine.winner ? 'W' : 'L';
+                return `vs ${opp.team.displayName} (${result} ${mine.score}-${opp.score})`;
+            }
+
+            bballTeamSelect.addEventListener('change', async () => {
+                const eventId = bballGameSelect.value;
+                const teamId  = bballTeamSelect.value;
+                bballPlayerSelect.innerHTML = '';
+                bballPlayerRow.style.display = 'none';
+                if (!eventId || !teamId) return;
+
+                setBballFetchMsg('Loading roster…', 'loading');
+                try {
+                    const players   = await fetchBballBoxscore(eventId);
+                    const teamBlock = players.find(p => p.team.id === teamId);
+                    const athletes  = teamBlock?.statistics?.[0]?.athletes || [];
+                    const active    = athletes.filter(a => !a.didNotPlay);
+
+                    if (active.length === 0) {
+                        setBballFetchMsg('No players with stats found for that team.', 'error');
+                        return;
+                    }
+
+                    bballPlayerSelect.innerHTML = '<option value="">Select a player…</option>' +
+                        active.map(a => `<option value="${a.athlete.id}">${a.athlete.displayName} (${a.athlete.position?.abbreviation || ''})</option>`).join('');
+                    bballPlayerRow.style.display = 'flex';
+                    setBballFetchMsg('Pick a player to load their stats.', '');
+                } catch (err) {
+                    setBballFetchMsg(
+                        'Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message,
+                        'error'
+                    );
+                }
+            });
+
+            bballPlayerSelect.addEventListener('change', () => {
+                const eventId   = bballGameSelect.value;
+                const teamId    = bballTeamSelect.value;
+                const athleteId = bballPlayerSelect.value;
+                if (!eventId || !teamId || !athleteId) return;
+
+                const players       = bballBoxscoreCache[eventId] || [];
+                const teamBlock      = players.find(p => p.team.id === teamId);
+                const statBlock      = teamBlock?.statistics?.[0];
+                const athleteEntry   = statBlock?.athletes?.find(a => a.athlete.id === athleteId);
+                if (!statBlock || !athleteEntry) {
+                    setBballFetchMsg("Could not find that player's stats.", 'error');
+                    return;
+                }
+
+                const stats = {};
+                statBlock.keys.forEach((key, i) => { stats[key] = athleteEntry.stats[i]; });
+
+                bballPts.value  = stats.points;
+                bballRebs.value = stats.rebounds;
+                bballAst.value  = stats.assists;
+                bballBlk.value  = stats.blocks;
+                bballStl.value  = stats.steals;
+                bballTo.value   = stats.turnovers;
+
+                document.getElementById('bball-player-name').value = athleteEntry.athlete.displayName;
+
+                const event = bballScoreboardCache?.events.find(ev => ev.id === eventId);
+                bballMatchup.textContent = event ? buildBballMatchupLine(event, teamId) : '';
+
+                setBballFetchMsg(`Loaded ${athleteEntry.athlete.displayName}.`, 'success');
+                bballGoBtn.click(); // auto-calculate
+            });        
+
     // ========================================================
     //  MLB PITCHER
     // ========================================================
@@ -410,6 +580,17 @@ window.onload = function () {
         }
     }
     bsballpFetchBtn.addEventListener('click', fetchMlbPitcherStats);
+    initMlbDrillDown({
+        prefix: 'bsballp',
+        statCategory: 'pitching',
+        goBtn: bsballpGoBtn,
+        applyStats(s) {
+            bsballpER.value  = s.earnedRuns || 0;
+            bsballpK.value   = s.strikeOuts || 0;
+            bsballpOut.value = outsToIp(s.outs ?? ipToOuts(s.inningsPitched || '0.0'));
+            bsballpWinChk.checked = (s.wins || 0) > 0;
+        }
+    });
     // ========================================================
     //  MLB HITTER
     // ========================================================
@@ -503,6 +684,146 @@ window.onload = function () {
             || people.find(p => p.fullName.toLowerCase().includes(target))
             || null;
     }
+    // ── MLB Drill-down (Date → League → Game → Team → Player) ──────
+    // Shared by Hitter and Pitcher cards. `applyStats(statsObj)` is
+    // caller-defined and writes the card-specific fields.
+    function initMlbDrillDown({ prefix, statCategory, goBtn, applyStats }) {
+        const dateInput    = document.querySelector(`#${prefix}-date`);
+        const loadGamesBtn = document.querySelector(`#${prefix}-load-games-btn`);
+        const gameRow      = document.querySelector(`#${prefix}-game-row`);
+        const gameSelect   = document.querySelector(`#${prefix}-game-select`);
+        const teamRow      = document.querySelector(`#${prefix}-team-row`);
+        const teamSelect   = document.querySelector(`#${prefix}-team-select`);
+        const playerRow    = document.querySelector(`#${prefix}-player-row`);
+        const playerSelect = document.querySelector(`#${prefix}-player-select`);
+        const fetchMsg     = document.querySelector(`#${prefix}-fetch-msg`);
+        const matchup      = document.querySelector(`#${prefix}-matchup`);
+
+        function setMsg(msg, type = '') {
+            fetchMsg.textContent = msg;
+            fetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+        }
+
+        let gamesCache = {};    // gamePk -> game object (from schedule)
+        let boxscoreCache = {}; // gamePk -> boxscore.teams object
+
+        function getSelectedSportId() {
+            return document.querySelector(`input[name="${prefix}-league"]:checked`)?.value || '1';
+        }
+
+        async function loadGames() {
+            const date = dateInput.value;
+            if (!date) { setMsg('Pick a date first.', 'error'); return; }
+
+            const sportId = getSelectedSportId();
+            loadGamesBtn.disabled = true;
+            gameRow.style.display = 'none';
+            teamRow.style.display = 'none';
+            playerRow.style.display = 'none';
+            gameSelect.innerHTML = '';
+            teamSelect.innerHTML = '';
+            playerSelect.innerHTML = '';
+            setMsg('Loading games…', 'loading');
+
+            try {
+                const res = await fetch(`${MLB_API}/schedule?sportId=${sportId}&date=${date}`);
+                if (!res.ok) throw new Error('schedule request failed');
+                const data = await res.json();
+                const games = data.dates?.[0]?.games || [];
+                gamesCache = {};
+                games.forEach(g => { gamesCache[g.gamePk] = g; });
+
+                if (games.length === 0) {
+                    setMsg(`No games found on ${date}.`, 'error');
+                    return;
+                }
+
+                gameSelect.innerHTML = '<option value="">Select a game…</option>' +
+                    games.map(g => `<option value="${g.gamePk}">${g.teams.away.team.name} @ ${g.teams.home.team.name}</option>`).join('');
+                gameRow.style.display = 'flex';
+                setMsg(`Found ${games.length} game(s) on ${date}.`, 'success');
+            } catch (err) {
+                setMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+            } finally {
+                loadGamesBtn.disabled = false;
+            }
+        }
+        loadGamesBtn.addEventListener('click', loadGames);
+
+        gameSelect.addEventListener('change', () => {
+            const gamePk = gameSelect.value;
+            teamSelect.innerHTML = '';
+            playerSelect.innerHTML = '';
+            teamRow.style.display = 'none';
+            playerRow.style.display = 'none';
+            if (!gamePk || !gamesCache[gamePk]) return;
+
+            const g = gamesCache[gamePk];
+            teamSelect.innerHTML = '<option value="">Select a team…</option>' +
+                `<option value="away">${g.teams.away.team.name}</option>` +
+                `<option value="home">${g.teams.home.team.name}</option>`;
+            teamRow.style.display = 'flex';
+        });
+
+        async function fetchBoxscore(gamePk) {
+            if (boxscoreCache[gamePk]) return boxscoreCache[gamePk];
+            const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`);
+            if (!res.ok) throw new Error('boxscore request failed');
+            const data = await res.json();
+            boxscoreCache[gamePk] = data.teams || {};
+            return boxscoreCache[gamePk];
+        }
+
+        teamSelect.addEventListener('change', async () => {
+            const gamePk   = gameSelect.value;
+            const homeAway = teamSelect.value;
+            playerSelect.innerHTML = '';
+            playerRow.style.display = 'none';
+            if (!gamePk || !homeAway) return;
+
+            setMsg('Loading roster…', 'loading');
+            try {
+                const teams   = await fetchBoxscore(gamePk);
+                const players = Object.values(teams[homeAway]?.players || {});
+                const active  = players.filter(p => Object.keys(p.stats?.[statCategory] || {}).length > 0);
+
+                if (active.length === 0) {
+                    setMsg(`No ${statCategory === 'pitching' ? 'pitchers' : 'batters'} with stats found for that team.`, 'error');
+                    return;
+                }
+
+                playerSelect.innerHTML = '<option value="">Select a player…</option>' +
+                    active.map(p => `<option value="${p.person.id}">${p.person.fullName} (${p.position.abbreviation})</option>`).join('');
+                playerRow.style.display = 'flex';
+                setMsg('Pick a player to load their stats.', '');
+            } catch (err) {
+                setMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+            }
+        });
+
+        playerSelect.addEventListener('change', () => {
+            const gamePk    = gameSelect.value;
+            const homeAway  = teamSelect.value;
+            const athleteId = playerSelect.value;
+            if (!gamePk || !homeAway || !athleteId) return;
+
+            const teams   = boxscoreCache[gamePk] || {};
+            const players = Object.values(teams[homeAway]?.players || {});
+            const entry   = players.find(p => String(p.person.id) === athleteId);
+            if (!entry) { setMsg("Could not find that player's stats.", 'error'); return; }
+
+            const statsObj = entry.stats[statCategory] || {};
+            document.getElementById(`${prefix}-player-name`).value = entry.person.fullName;
+            applyStats(statsObj);
+
+            const g   = gamesCache[gamePk];
+            const opp = homeAway === 'away' ? g?.teams.home.team.name : g?.teams.away.team.name;
+            matchup.textContent = opp ? `vs ${opp}` : '';
+
+            setMsg(`Loaded ${entry.person.fullName}.`, 'success');
+            goBtn.click(); // auto-calculate
+        });
+    }
     async function fetchMlbHitterStats() {
         const name = document.getElementById('bsballh-player-name').value.trim();
         const date = bsballhDateInput.value; // YYYY-MM-DD
@@ -573,6 +894,23 @@ window.onload = function () {
         }
     }
     bsballhFetchBtn.addEventListener('click', fetchMlbHitterStats);
+    initMlbDrillDown({
+        prefix: 'bsballh',
+        statCategory: 'batting',
+        goBtn: bsballhGoBtn,
+        applyStats(s) {
+            const singles = Math.max(0, (s.hits || 0) - (s.doubles || 0) - (s.triples || 0) - (s.homeRuns || 0));
+            bsballhSing.value = singles;
+            bsballhDoub.value = s.doubles || 0;
+            bsballhTrip.value = s.triples || 0;
+            bsballhHR.value   = s.homeRuns || 0;
+            bsballhR.value    = s.runs || 0;
+            bsballhRBI.value  = s.rbi || 0;
+            bsballhBOB.value  = s.baseOnBalls || 0;
+            bsballhHBP.value  = s.hitByPitch || 0;
+            bsballhSB.value   = s.stolenBases || 0;
+        }
+    });
     // ========================================================
     //  TENNIS
     // ========================================================

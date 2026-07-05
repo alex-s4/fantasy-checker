@@ -54,30 +54,67 @@
 
         <div class="card-body" id="content-bball">
 
-          <!-- Player name + period -->
-          <input type="text" id="bball-player-name" class="stat-input player-name-input" placeholder="Player name">
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date —</p>
 
-          <!-- <div class="round-pill-group period-selector" style="margin-bottom:.85rem">
-            <label class="round-pill" style="width:74px"><input type="radio" name="bball-period" value="Full Game" checked> Full Game</label>
-            <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="1Q"> 1Q</label>
-            <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="4Q"> 4Q</label>
-            <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="1H"> 1H</label>
-            <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="2H"> 2H</label>
-          </div> -->
+        <!-- Shared date -->
+        <div class="fetch-row">
+          <input type="date" id="bball-date" class="stat-input" style="width:100%">
+        </div>
 
-          <div class="fetch-row">
-            <input type="date" id="bball-date" class="stat-input" style="width:auto">
-            <button id="bball-fetch-btn" class="btn btn-secondary">
-              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill
-            </button>
-          </div>
-          <p id="bball-fetch-msg" class="fetch-msg"></p>
-          <p id="bball-matchup" class="matchup-line"></p>
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Required Fields —</p>
 
-          <!-- Modal trigger -->
-          <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#basketballModal">
-            <i class="fa-regular fa-circle-question"></i> How to check?
+        <!-- League -->
+        <div class="round-pill-group" id="bball-league-group" style="margin-bottom:.5rem">
+          <label class="round-pill" style="width:31%"><input type="radio" name="bball-league" value="nba" checked> NBA</label>
+          <label class="round-pill" style="width:31%"><input type="radio" name="bball-league" value="wnba"> WNBA</label>
+          <label class="round-pill" style="width:31%"><input type="radio" name="bball-league" value="mens-college-basketball"> CBB</label>
+        </div>
+
+        <!-- Browse by date/league/team/player -->
+        <div class="fetch-row" style="width:100%">
+          <button id="bball-load-games-btn" type="button" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-list"></i> Load Games
           </button>
+        </div>
+
+        <div class="fetch-row" id="bball-game-row" style="display:none">
+          <select id="bball-game-select" class="stat-input" style="width:100%; min-width:200px;"></select>
+        </div>
+
+        <div class="fetch-row" id="bball-team-row" style="display:none">
+          <select id="bball-team-select" class="stat-input" style="width:100%; min-width:160px;"></select>
+        </div>
+
+        <div class="fetch-row" id="bball-player-row" style="display:none">
+          <select id="bball-player-select" class="stat-input" style="width:100%; min-width:220px;"></select>
+        </div>
+
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— or —</p>
+
+        <!-- Search by name (optional, manual fallback) -->
+        <input type="text" id="bball-player-name" class="stat-input player-name-input" placeholder="Search player name (optional)">
+        <div class="fetch-row">
+          <button id="bball-fetch-btn" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill from ESPN
+          </button>
+        </div>
+
+        <!-- Shared status -->
+        <p id="bball-fetch-msg" class="fetch-msg"></p>
+        <p id="bball-matchup" class="matchup-line"></p>
+
+        <!-- Period + modal trigger -->
+        <!-- <div class="round-pill-group period-selector" style="margin-bottom:.85rem">
+          <label class="round-pill" style="width:74px"><input type="radio" name="bball-period" value="Full Game" checked> Full Game</label>
+          <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="1Q"> 1Q</label>
+          <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="4Q"> 4Q</label>
+          <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="1H"> 1H</label>
+          <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="2H"> 2H</label>
+        </div> -->
+
+        <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#basketballModal">
+          <i class="fa-regular fa-circle-question"></i> How to check?
+        </button>
 
           <table class="stat-table">
             <tr>
@@ -146,15 +183,45 @@
         </div>
 
         <div class="card-body" id="content-bsballp">
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date —</p>
+        <div class="fetch-row">
+          <input type="date" id="bsballp-date" class="stat-input stat-input--full">
+        </div>
 
-          <input type="text" id="bsballp-player-name" class="stat-input player-name-input" placeholder="Player name">
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Required Fields —</p>
+        <div class="round-pill-group" id="bsballp-league-group" style="margin-bottom:.5rem">
+          <label class="round-pill" style="width:31%"><input type="radio" name="bsballp-league" value="1" checked> MLB</label>
+          <label class="round-pill" style="width:31%"><input type="radio" name="bsballp-league" value="32"> KBO</label>
+          <label class="round-pill" style="width:31%"><input type="radio" name="bsballp-league" value="31"> NPB</label>
+        </div>
 
-          <div class="fetch-row">
-            <input type="date" id="bsballp-date" class="stat-input" style="width:auto">
-            <button id="bsballp-fetch-btn" class="btn btn-secondary">
-              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill
-            </button>
-          </div>
+        <div class="fetch-row" style="width:100%">
+          <button id="bsballp-load-games-btn" type="button" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-list"></i> Load Games
+          </button>
+        </div>
+        <div class="fetch-row" id="bsballp-game-row" style="display:none">
+          <select id="bsballp-game-select" class="stat-input stat-input--full"></select>
+        </div>
+        <div class="fetch-row" id="bsballp-team-row" style="display:none">
+          <select id="bsballp-team-select" class="stat-input stat-input--full"></select>
+        </div>
+        <div class="fetch-row" id="bsballp-player-row" style="display:none">
+          <select id="bsballp-player-select" class="stat-input stat-input--full"></select>
+        </div>
+
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— or —</p>
+
+        <input type="text" id="bsballp-player-name" class="stat-input player-name-input" placeholder="Search player name (optional)">
+        <div class="fetch-row">
+          <button id="bsballp-fetch-btn" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill from MLB
+          </button>
+        </div>
+
+        <p id="bsballp-fetch-msg" class="fetch-msg"></p>
+        <p id="bsballp-matchup" class="matchup-line"></p>
+
           <p id="bsballp-fetch-msg" class="fetch-msg"></p>
           <p id="bsballp-matchup" class="matchup-line"></p>          
 
@@ -248,16 +315,44 @@
 
         <div class="card-body" id="content-bsballh">
 
-          <input type="text" id="bsballh-player-name" class="stat-input player-name-input" placeholder="Player name">
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date —</p>
+        <div class="fetch-row">
+          <input type="date" id="bsballh-date" class="stat-input stat-input--full">
+        </div>
 
-          <div class="fetch-row">
-            <input type="date" id="bsballh-date" class="stat-input" style="width:auto">
-            <button id="bsballh-fetch-btn" class="btn btn-secondary">
-              <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill
-            </button>
-          </div>
-          <p id="bsballh-fetch-msg" class="fetch-msg"></p>
-          <p id="bsballh-matchup" class="matchup-line"></p>
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Required Fields —</p>
+        <div class="round-pill-group" id="bsballh-league-group" style="margin-bottom:.5rem">
+          <label class="round-pill" style="width:31%"><input type="radio" name="bsballh-league" value="1" checked> MLB</label>
+          <label class="round-pill" style="width:31%"><input type="radio" name="bsballh-league" value="32"> KBO</label>
+          <label class="round-pill" style="width:31%"><input type="radio" name="bsballh-league" value="31"> NPB</label>
+        </div>
+
+        <div class="fetch-row" style="width:100%">
+          <button id="bsballh-load-games-btn" type="button" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-list"></i> Load Games
+          </button>
+        </div>
+        <div class="fetch-row" id="bsballh-game-row" style="display:none">
+          <select id="bsballh-game-select" class="stat-input stat-input--full"></select>
+        </div>
+        <div class="fetch-row" id="bsballh-team-row" style="display:none">
+          <select id="bsballh-team-select" class="stat-input stat-input--full"></select>
+        </div>
+        <div class="fetch-row" id="bsballh-player-row" style="display:none">
+          <select id="bsballh-player-select" class="stat-input stat-input--full"></select>
+        </div>
+
+        <p class="section-label" style="text-align:center; margin:.6rem 0;">— or —</p>
+
+        <input type="text" id="bsballh-player-name" class="stat-input player-name-input" placeholder="Search player name (optional)">
+        <div class="fetch-row">
+          <button id="bsballh-fetch-btn" class="btn btn-secondary btn-full">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Auto-fill from MLB
+          </button>
+        </div>
+
+        <p id="bsballh-fetch-msg" class="fetch-msg"></p>
+        <p id="bsballh-matchup" class="matchup-line"></p>
 
           <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#hitterModal">
             <i class="fa-regular fa-circle-question"></i> How to check?

@@ -486,6 +486,11 @@ main { padding: 2rem 1.5rem 5rem; }
 }
 .btn:active { transform: translateY(1px); }
 
+.btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
 kbd {
   display: inline-block;
   font-family: inherit;
@@ -739,4 +744,8 @@ a.popover-btn { padding: 0 0 0 6px; }
   color: var(--text-primary);
   min-height: 1.1em;
   margin-bottom: .6rem;
+}
+
+.stat-input--full {
+  width: 100% !important;
 }
