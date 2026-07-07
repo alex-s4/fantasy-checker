@@ -680,14 +680,32 @@
 
         <div class="card-body" id="content-fballo">
 
-          <input type="text" id="fballo-player-name" class="stat-input player-name-input" placeholder="Player name">
-          <div class="round-pill-group period-selector" style="margin-bottom:.85rem">
-            <label class="round-pill" style="width:74px"><input type="radio" name="fballo-period" value="Full Game" checked> Full Game</label>
-            <label class="round-pill" style="width:42px"><input type="radio" name="fballo-period" value="1Q"> 1Q</label>
-            <label class="round-pill" style="width:42px"><input type="radio" name="fballo-period" value="4Q"> 4Q</label>
-            <label class="round-pill" style="width:42px"><input type="radio" name="fballo-period" value="1H"> 1H</label>
-            <label class="round-pill" style="width:42px"><input type="radio" name="fballo-period" value="2H"> 2H</label>
+          
+
+          <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date —</p>
+          <div class="fetch-row">
+            <input type="date" id="fballo-date" class="stat-input stat-input--full">
           </div>
+
+              <div class="fetch-row" style="width:100%">
+                <button id="fballo-load-games-btn" type="button" class="btn btn-secondary btn-full">
+                  <i class="fa-solid fa-list"></i> Load Games
+                </button>
+              </div>
+              <div class="fetch-row" id="fballo-game-row" style="display:none">
+                <select id="fballo-game-select" class="stat-input stat-input--full"></select>
+              </div>
+              <div class="fetch-row" id="fballo-team-row" style="display:none">
+                <select id="fballo-team-select" class="stat-input stat-input--full"></select>
+              </div>
+              <div class="fetch-row" id="fballo-player-row" style="display:none">
+                <select id="fballo-player-select" class="stat-input stat-input--full"></select>
+              </div>
+
+              <p id="fballo-fetch-msg" class="fetch-msg"></p>
+              <p id="fballo-matchup" class="matchup-line"></p>
+
+              <input type="text" id="fballo-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
 
           <table class="stat-table">
             <tr><td>Passing Yards</td><td>0.04 pts/yd</td><td><input type="number" id="fballo-passyd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-passyd-val" class="fballo-val"></span></td></tr>
@@ -699,9 +717,19 @@
             <tr><td>Receiving TDs</td><td>6 pts</td><td><input type="number" id="fballo-rectd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-rectd-val" class="fballo-val"></span></td></tr>
             <tr><td>Receptions</td><td>1 pt</td><td><input type="number" id="fballo-rec" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-rec-val" class="fballo-val"></span></td></tr>
             <tr><td>Fumbles Lost</td><td>−1 pt</td><td><input type="number" id="fballo-fl" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-fl-val" class="fballo-val"></span></td></tr>
-            <tr><td>2-Pt Conversions</td><td>2 pts</td><td><input type="number" id="fballo-2ptc" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-2ptc-val" class="fballo-val"></span></td></tr>
-            <tr><td>Off. Fumble Recovery TD</td><td>6 pts</td><td><input type="number" id="fballo-ofrt" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-ofrt-val" class="fballo-val"></span></td></tr>
-            <tr><td>Kick/Punt/FG Return TD</td><td>6 pts</td><td><input type="number" id="fballo-kpfgrtd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-kpfgrtd-val" class="fballo-val"></span></td></tr>
+            <tr>
+              <td>2-Pt Conversions <span class="manual-badge">Manual</span></td>
+              <td>2 pts</td>
+              <td><input type="number" id="fballo-2ptc" class="stat-input fballo-fs" min="0"></td>
+              <td><span id="fballo-2ptc-val" class="fballo-val"></span></td>
+            </tr>
+            <tr>
+              <td>Off. Fumble Recovery TD <span class="manual-badge">Manual</span></td>
+              <td>6 pts</td>
+              <td><input type="number" id="fballo-ofrt" class="stat-input fballo-fs" min="0"></td>
+              <td><span id="fballo-ofrt-val" class="fballo-val"></span></td>
+            </tr>
+            <tr><td>Kick/Punt/FG Return TD <span class="manual-badge">Manual</span></td><td>6 pts</td><td><input type="number" id="fballo-kpfgrtd" class="stat-input fballo-fs" min="0"></td><td><span id="fballo-kpfgrtd-val" class="fballo-val"></span></td></tr>
           </table>
 
           <hr class="divider">

@@ -1268,9 +1268,202 @@ window.onload = function () {
         fballoTotalEl.innerHTML = '';
         document.querySelector('#fballo-breakdown').innerHTML = '';
         document.querySelector('#fballo-textarea-btn-cont').style.display = 'none';
+        fballoGameSelect.innerHTML = '';
+        fballoTeamSelect.innerHTML = '';
+        fballoPlayerSelect.innerHTML = '';
+        fballoGameRow.style.display = 'none';
+        fballoTeamRow.style.display = 'none';
+        fballoPlayerRow.style.display = 'none';
+        fballoFetchMsg.textContent = '';
+        fballoMatchup.textContent = '';
     });
     fbálloCopyBtn.addEventListener('click',  () => copyBreakdown('#fballo-breakdown'));
     fballoHeaderEl.addEventListener('click', () => toggleSection('#content-fballo'));
+
+    // ── NFL Offensive — Drill-down (Date → Game → Team → Player) ──
+    // Unlike NBA/MLB, ESPN's NFL boxscore splits stats into separate
+    // category tables (passing, rushing, receiving, fumbles, kickReturns,
+    // puntReturns, kicking, defensive). A player can appear in several —
+    // e.g. a WR with both receiving and punt-return stats — so we merge
+    // every offensive category's stat line for a given athlete.id into
+    // one combined object before building the player dropdown.
+    const FBALLO_OFFENSE_CATEGORIES = ['passing', 'rushing', 'receiving', 'fumbles', 'kickReturns', 'puntReturns'];
+
+    const fballoDateInput   = document.querySelector('#fballo-date');
+    const fballoLoadGamesBtn= document.querySelector('#fballo-load-games-btn');
+    const fballoGameRow     = document.querySelector('#fballo-game-row');
+    const fballoGameSelect  = document.querySelector('#fballo-game-select');
+    const fballoTeamRow     = document.querySelector('#fballo-team-row');
+    const fballoTeamSelect  = document.querySelector('#fballo-team-select');
+    const fballoPlayerRow   = document.querySelector('#fballo-player-row');
+    const fballoPlayerSelect= document.querySelector('#fballo-player-select');
+    const fballoFetchMsg    = document.querySelector('#fballo-fetch-msg');
+    const fballoMatchup     = document.querySelector('#fballo-matchup');
+
+    function setFballoFetchMsg(msg, type = '') {
+        fballoFetchMsg.textContent = msg;
+        fballoFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    let fballoScoreboardCache = null;
+    const fballoBoxscoreCache = {}; // eventId -> boxscore.players[]
+
+    async function loadFballoGames() {
+        const date = fballoDateInput.value;
+        if (!date) { setFballoFetchMsg('Pick a date first.', 'error'); return; }
+
+        fballoLoadGamesBtn.disabled = true;
+        fballoGameRow.style.display = 'none';
+        fballoTeamRow.style.display = 'none';
+        fballoPlayerRow.style.display = 'none';
+        fballoGameSelect.innerHTML = '';
+        fballoTeamSelect.innerHTML = '';
+        fballoPlayerSelect.innerHTML = '';
+        setFballoFetchMsg('Loading games…', 'loading');
+
+        try {
+            const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${date.replaceAll('-', '')}`);
+            if (!res.ok) throw new Error('scoreboard request failed');
+            const data = await res.json();
+            fballoScoreboardCache = data;
+
+            const events = data.events || [];
+            if (events.length === 0) {
+                setFballoFetchMsg(`No games found on ${date}.`, 'error');
+                return;
+            }
+
+            fballoGameSelect.innerHTML = '<option value="">Select a game…</option>' +
+                events.map(ev => `<option value="${ev.id}">${ev.shortName || ev.name}</option>`).join('');
+            fballoGameRow.style.display = 'flex';
+            setFballoFetchMsg(`Found ${events.length} game(s) on ${date}.`, 'success');
+        } catch (err) {
+            setFballoFetchMsg('Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+        } finally {
+            fballoLoadGamesBtn.disabled = false;
+        }
+    }
+    fballoLoadGamesBtn.addEventListener('click', loadFballoGames);
+
+    fballoGameSelect.addEventListener('change', () => {
+        const eventId = fballoGameSelect.value;
+        fballoTeamSelect.innerHTML = '';
+        fballoPlayerSelect.innerHTML = '';
+        fballoTeamRow.style.display = 'none';
+        fballoPlayerRow.style.display = 'none';
+        if (!eventId || !fballoScoreboardCache) return;
+
+        const event = fballoScoreboardCache.events.find(ev => ev.id === eventId);
+        const competitors = event?.competitions?.[0]?.competitors || [];
+        if (competitors.length === 0) return;
+
+        fballoTeamSelect.innerHTML = '<option value="">Select a team…</option>' +
+            competitors.map(c => `<option value="${c.team.id}">${c.team.displayName}</option>`).join('');
+        fballoTeamRow.style.display = 'flex';
+    });
+
+    async function fetchFballoBoxscore(eventId) {
+        if (fballoBoxscoreCache[eventId]) return fballoBoxscoreCache[eventId];
+        const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${eventId}`);
+        if (!res.ok) throw new Error('boxscore request failed');
+        const data = await res.json();
+        const players = data.boxscore?.players || [];
+        fballoBoxscoreCache[eventId] = players;
+        return players;
+    }
+
+    /** Merge every offensive category's stat line for each athlete into one combined object. */
+    function mergeFballoOffensiveStats(teamBlock) {
+        const merged = {}; // athleteId -> { displayName, jersey, stats: {...} }
+        (teamBlock.statistics || []).forEach(category => {
+            if (!FBALLO_OFFENSE_CATEGORIES.includes(category.name)) return;
+            (category.athletes || []).forEach(entry => {
+                const id = entry.athlete.id;
+                if (!merged[id]) {
+                    merged[id] = { displayName: entry.athlete.displayName, jersey: entry.athlete.jersey, stats: {} };
+                }
+                category.keys.forEach((key, i) => { merged[id].stats[key] = entry.stats[i]; });
+            });
+        });
+        return merged;
+    }
+
+    function buildFballoMatchupLine(event, teamId) {
+        const competitors = event?.competitions?.[0]?.competitors || [];
+        const mine = competitors.find(c => c.team.id === teamId);
+        const opp  = competitors.find(c => c.team.id !== teamId);
+        if (!mine || !opp) return '';
+        const result = mine.winner ? 'W' : 'L';
+        return `vs ${opp.team.displayName} (${result} ${mine.score}-${opp.score})`;
+    }
+
+    fballoTeamSelect.addEventListener('change', async () => {
+        const eventId = fballoGameSelect.value;
+        const teamId  = fballoTeamSelect.value;
+        fballoPlayerSelect.innerHTML = '';
+        fballoPlayerRow.style.display = 'none';
+        if (!eventId || !teamId) return;
+
+        setFballoFetchMsg('Loading roster…', 'loading');
+        try {
+            const players   = await fetchFballoBoxscore(eventId);
+            const teamBlock = players.find(p => p.team.id === teamId);
+            if (!teamBlock) {
+                setFballoFetchMsg('No offensive stats found for that team.', 'error');
+                return;
+            }
+            const merged = mergeFballoOffensiveStats(teamBlock);
+            const entries = Object.entries(merged);
+
+            if (entries.length === 0) {
+                setFballoFetchMsg('No offensive stats found for that team.', 'error');
+                return;
+            }
+
+            fballoBoxscoreCache[`${eventId}_merged_${teamId}`] = merged; // stash for player-select handler
+            fballoPlayerSelect.innerHTML = '<option value="">Select a player…</option>' +
+                entries.map(([id, p]) => `<option value="${id}">${p.displayName} (#${p.jersey || '-'})</option>`).join('');
+            fballoPlayerRow.style.display = 'flex';
+            setFballoFetchMsg('Pick a player to load their stats.', '');
+        } catch (err) {
+            setFballoFetchMsg('Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+        }
+    });
+
+    fballoPlayerSelect.addEventListener('change', () => {
+        const eventId   = fballoGameSelect.value;
+        const teamId    = fballoTeamSelect.value;
+        const athleteId = fballoPlayerSelect.value;
+        if (!eventId || !teamId || !athleteId) return;
+
+        const merged = fballoBoxscoreCache[`${eventId}_merged_${teamId}`] || {};
+        const entry  = merged[athleteId];
+        if (!entry) { setFballoFetchMsg("Could not find that player's stats.", 'error'); return; }
+
+        const s = entry.stats;
+        fballoPassYd.value  = s.passingYards || 0;
+        fballoPassTD.value  = s.passingTouchdowns || 0;
+        fballoInt.value     = s.interceptions || 0;
+        fballoRushYd.value  = s.rushingYards || 0;
+        fballoRushTD.value  = s.rushingTouchdowns || 0;
+        fballoRecYd.value   = s.receivingYards || 0;
+        fballoRecTD.value   = s.receivingTouchdowns || 0;
+        fballoRec.value     = s.receptions || 0;
+        fballoFL.value      = s.fumblesLost || 0;
+        fballoKPFGRTD.value = (Number(s.kickReturnTouchdowns) || 0) + (Number(s.puntReturnTouchdowns) || 0);
+        // 2-Pt Conversions and Offensive Fumble Recovery TD aren't in this data — reset to blank for manual entry
+        fballo2Ptc.value = '';
+        fballoOFRT.value = '';
+
+        document.getElementById('fballo-player-name').value = entry.displayName;
+
+        const event = fballoScoreboardCache?.events.find(ev => ev.id === eventId);
+        fballoMatchup.textContent = event ? buildFballoMatchupLine(event, teamId) : '';
+
+        setFballoFetchMsg(`Loaded ${entry.displayName}.`, 'success');
+        fballoGoBtn.click(); // auto-calculate
+    });
+
     // ========================================================
     //  NFL DST (currently hidden in the UI)
     // ========================================================

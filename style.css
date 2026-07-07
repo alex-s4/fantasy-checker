@@ -749,3 +749,25 @@ a.popover-btn { padding: 0 0 0 6px; }
 .stat-input--full {
   width: 100% !important;
 }
+
+.manual-badge {
+  display: inline-block;
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: .4rem;
+  vertical-align: middle;
+}
+
+.manual-note {
+  font-size: .72rem;
+  color: var(--text-muted);
+  margin: .4rem 0 .75rem;
+  line-height: 1.4;
+}
