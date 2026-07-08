@@ -60,9 +60,6 @@
         <div class="fetch-row">
           <input type="date" id="bball-date" class="stat-input" style="width:100%">
         </div>
-
-        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Required Fields —</p>
-
         <!-- League -->
         <div class="round-pill-group" id="bball-league-group" style="margin-bottom:.5rem">
           <label class="round-pill" style="width:31%"><input type="radio" name="bball-league" value="nba" checked> NBA</label>
@@ -111,10 +108,6 @@
           <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="1H"> 1H</label>
           <label class="round-pill" style="width:42px"><input type="radio" name="bball-period" value="2H"> 2H</label>
         </div> -->
-
-        <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#basketballModal">
-          <i class="fa-regular fa-circle-question"></i> How to check?
-        </button>
 
           <table class="stat-table">
             <tr>
@@ -188,9 +181,8 @@
           <input type="date" id="bsballp-date" class="stat-input stat-input--full">
         </div>
 
-        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Required Fields —</p>
         <div class="round-pill-group" id="bsballp-league-group" style="margin-bottom:.5rem">
-          <label class="round-pill" style="width:31%"><input type="radio" name="bsballp-league" value="1" checked> MLB</label>
+          <label class="round-pill hide" style="width:31%"><input type="radio" name="bsballp-league" value="1" checked> MLB</label>
           <label class="round-pill hide" style="width:31%"><input type="radio" name="bsballp-league" value="32"> KBO</label>
           <label class="round-pill hide" style="width:31%"><input type="radio" name="bsballp-league" value="31"> NPB</label>
         </div>
@@ -224,10 +216,6 @@
 
           <p id="bsballp-fetch-msg" class="fetch-msg"></p>
           <p id="bsballp-matchup" class="matchup-line"></p>          
-
-          <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#pitcherModal">
-            <i class="fa-regular fa-circle-question"></i> How to check?
-          </button>
 
           <table class="stat-table">
             <tr>
@@ -320,9 +308,8 @@
           <input type="date" id="bsballh-date" class="stat-input stat-input--full">
         </div>
 
-        <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Required Fields —</p>
         <div class="round-pill-group" id="bsballh-league-group" style="margin-bottom:.5rem">
-          <label class="round-pill" style="width:31%"><input type="radio" name="bsballh-league" value="1" checked> MLB</label>
+          <label class="round-pill hide" style="width:31%"><input type="radio" name="bsballh-league" value="1" checked> MLB</label>
           <label class="round-pill hide" style="width:31%"><input type="radio" name="bsballh-league" value="32"> KBO</label>
           <label class="round-pill hide" style="width:31%"><input type="radio" name="bsballh-league" value="31"> NPB</label>
         </div>
@@ -353,10 +340,6 @@
 
         <p id="bsballh-fetch-msg" class="fetch-msg"></p>
         <p id="bsballh-matchup" class="matchup-line"></p>
-
-          <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#hitterModal">
-            <i class="fa-regular fa-circle-question"></i> How to check?
-          </button>
 
           <table class="stat-table">
             <tr>
@@ -442,10 +425,6 @@
         <div class="card-body" id="content-tennis">
 
           <input type="text" id="tennis-player-name" class="stat-input player-name-input" placeholder="Player name">
-
-          <button type="button" class="btn btn-help mb-3" data-bs-toggle="modal" data-bs-target="#tennisModal">
-            <i class="fa-regular fa-circle-question"></i> How to check?
-          </button>
 
           <!-- Score grid — columns update when format changes -->
           <p class="section-label">Match score</p>
@@ -809,76 +788,6 @@
 
   <footer>Copyright &copy; 2025 &nbsp;&middot;&nbsp; All rights reserved.
   </footer>
-
-  <!-- ══════════════════════════════════════════════════════
-       MODALS
-  ══════════════════════════════════════════════════════ -->
-
-  <!-- Basketball -->
-  <div class="modal fade" id="basketballModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
-      <div class="modal-content">
-        <div class="modal-header"><h1 class="modal-title fs-4">Basketball Fantasy Score</h1><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-          <h2>How to check?</h2>
-          <h5>NBA Box Score</h5><img src="./assets/images/bball2.png" alt="" class="modal-img"><img src="./assets/images/bball3.png" alt="" class="modal-img fantasy-ss">
-          <hr><h5>Gamebook</h5><img src="./assets/images/bball4.png" alt="" class="modal-img"><img src="./assets/images/bball5.png" alt="" class="modal-img fantasy-ss">
-          <hr><h5>ESPN (NCAA)</h5><img src="./assets/images/bball6.png" alt="" class="modal-img"><img src="./assets/images/bball7.png" alt="" class="modal-img fantasy-ss">
-          <hr><h5>WNBA</h5><img src="./assets/images/bball8.png" alt="" class="modal-img"><img src="./assets/images/bball9.png" alt="" class="modal-img fantasy-ss">
-          <hr><h2>Stats providers</h2>
-          <p><strong>NBA:</strong> nba.com &nbsp;|&nbsp; <strong>CBB:</strong> espn.com, ncaa.com &nbsp;|&nbsp; <strong>WNBA:</strong> wnba.com</p>
-        </div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MLB Pitcher -->
-  <div class="modal fade" id="pitcherModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
-      <div class="modal-content">
-        <div class="modal-header"><h1 class="modal-title fs-4">Pitcher Fantasy Score</h1><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-          <div class="info-banner"><i class="fa-solid fa-circle-info"></i><div><strong>Innings Pitched:</strong> 1 IP = 3 Outs · 0.1 IP = 1 Out · Example: 1.1 IP = 4 Outs<br><strong>Quality Start:</strong> 6+ IP &amp; 3 or fewer ER</div></div>
-          <h5>MLB Box Score</h5><img src="./assets/images/basball1.png" alt="" class="modal-img"><img src="./assets/images/basball2.png" alt="" class="modal-img fantasy-ss">
-          <hr><h5>ESPN Stats</h5><img src="./assets/images/basball3.png" alt="" class="modal-img"><img src="./assets/images/basball4.png" alt="" class="modal-img fantasy-ss">
-        </div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MLB Hitter -->
-  <div class="modal fade" id="hitterModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
-      <div class="modal-content">
-        <div class="modal-header"><h1 class="modal-title fs-4">Hitter Fantasy Score</h1><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-          <div class="info-banner"><i class="fa-solid fa-circle-info"></i><div><strong>Total Bases:</strong> Single=1 · 2B=2 · 3B=3 · HR=4<br><strong>Singles</strong> = TB − (2×2B) − (3×3B) − (4×HR)</div></div>
-          <h5>MLB Stats</h5><img src="./assets/images/basballh1.png" alt="" class="modal-img"><img src="./assets/images/basballh2.png" alt="" class="modal-img fantasy-ss">
-          <hr><img src="./assets/images/basballh3.png" alt="" class="modal-img"><img src="./assets/images/basballh4.png" alt="" class="modal-img fantasy-ss">
-          <hr><h5>ESPN Box Score</h5><img src="./assets/images/basballh5.png" alt="" class="modal-img"><img src="./assets/images/basballh6.png" alt="" class="modal-img fantasy-ss">
-        </div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tennis -->
-  <div class="modal fade" id="tennisModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
-      <div class="modal-content">
-        <div class="modal-header"><h1 class="modal-title fs-4">Tennis Fantasy Score</h1><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-          <div class="info-banner"><i class="fa-solid fa-circle-info"></i><div>If an athlete retires, their opponent is scored as if they won all remaining games. A super tiebreak counts as 1 game.</div></div>
-          <h5>ATP Tour Stats</h5><img src="./assets/images/tenn1.png" alt="" class="modal-img"><img src="./assets/images/tenn2.png" alt="" class="modal-img fantasy-ss">
-          <hr><img src="./assets/images/tenn3.png" alt="" class="modal-img"><img src="./assets/images/tenn4.png" alt="" class="modal-img fantasy-ss">
-          <hr><h5>WTA Stats</h5><img src="./assets/images/tenn5.png" alt="" class="modal-img"><img src="./assets/images/tenn6.png" alt="" class="modal-img fantasy-ss">
-        </div>
-        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
-      </div>
-    </div>
-  </div>
 
 </div><!-- /#root -->
 
