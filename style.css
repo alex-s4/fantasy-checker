@@ -765,6 +765,21 @@ a.popover-btn { padding: 0 0 0 6px; }
   vertical-align: middle;
 }
 
+.manual-bolt {
+  display: inline-block;
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: aqua;
+  background: var(--bg-input);
+  border: 1px solid aqua;
+  border-radius: 4px;
+  padding: 3px 5px;
+  margin-left: .4rem;
+  vertical-align: middle;
+}
+
 .manual-note {
   font-size: .72rem;
   color: var(--text-muted);
