@@ -786,3 +786,93 @@ a.popover-btn { padding: 0 0 0 6px; }
   margin: .4rem 0 .75rem;
   line-height: 1.4;
 }
+
+/* ── Gamebook Checker — Dropzone ─────────────────────────── */
+.gamebook-dropzone {
+  border: 2px dashed var(--border-input);
+  border-radius: var(--radius);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  margin-bottom: .75rem;
+}
+.gamebook-dropzone:hover,
+.gamebook-dropzone--active {
+  border-color: var(--purple);
+  background: var(--purple-dim);
+}
+.gamebook-dropzone-icon {
+  font-size: 1.8rem;
+  color: var(--text-muted);
+  margin-bottom: .5rem;
+  display: block;
+}
+.gamebook-dropzone p {
+  color: var(--text-secondary);
+  font-size: .85rem;
+}
+
+/* ── Gamebook Checker — Results table ────────────────────── */
+.gamebook-table-wrap {
+  overflow-x: auto;
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.gamebook-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8rem;
+  white-space: nowrap;
+}
+.gamebook-table th,
+.gamebook-table td {
+  padding: .5rem .65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.gamebook-table th {
+  color: var(--text-muted);
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  background: var(--bg-card-hover);
+  position: sticky;
+  top: 0;
+}
+.gamebook-table td {
+  color: var(--text-secondary);
+}
+.gamebook-table tr:hover td {
+  background: var(--bg-card-hover);
+}
+.gamebook-dnp-cell {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Gamebook Checker — Flag badges (reuses .manual-badge base) ── */
+.gamebook-flag-dnp {
+  color: var(--text-muted);
+  border-color: var(--border-input);
+}
+.gamebook-flag-reboot {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+.gamebook-flag-warn {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+  cursor: help;
+}
+
+/* ── Gamebook Checker — Highlighted columns (FINAL, 1H, 2H, 1Q, 4Q) ── */
+.gamebook-table th.gamebook-col-highlight {
+  background: var(--purple-dim);
+  color: var(--purple-light);
+}
+.gamebook-table td.gamebook-col-highlight {
+  background: var(--purple-dim);
+  font-weight: 500;
+}

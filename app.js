@@ -755,7 +755,10 @@ window.onload = function () {
                 }
 
                 gameSelect.innerHTML = '<option value="">Select a game…</option>' +
-                    games.map(g => `<option value="${g.gamePk}">${g.teams.away.team.name} @ ${g.teams.home.team.name}</option>`).join('');
+                    games.map(g => {
+                        const dhSuffix = g.doubleHeader !== 'N' ? ` (Game ${g.gameNumber})` : '';
+                        return `<option value="${g.gamePk}">${g.teams.away.team.name} @ ${g.teams.home.team.name}${dhSuffix}</option>`;
+                    }).join('');
                 gameRow.style.display = 'flex';
                 setMsg(`Found ${games.length} game(s) on ${date}.`, 'success');
             } catch (err) {
@@ -935,7 +938,6 @@ window.onload = function () {
     const tennisClearBtn = document.querySelector('#tennis-clear');
     const tennisCopyBtn  = document.querySelector('#tennis-copy');
     const tennisHeaderEl = document.querySelector('#head-tennis');
-    let   tennisHzsChk   = document.querySelector('#tennis-hzs-checkbox');
     const tennisInputs = document.querySelectorAll('.tennis-fs');
     const tennisVals   = document.querySelectorAll('.tennis-val');
     // Calculated hidden inputs
@@ -1064,7 +1066,6 @@ window.onload = function () {
         const retirementNote = retirementChecked ? '[Retirement — scores adjusted per PrizePicks rule]' : '';
         const tennisBreakdown = withHeader(tennisHeader, buildBreakdown(statLines, total, retirementNote));
         showBreakdown('#tennis-breakdown', '#tennis-textarea-btn-cont', tennisBreakdown);
-        tennisHzsChk = setupHideZerosCheckbox(tennisHzsChk, '#tennis-breakdown', statLines, tennisInputs, total, retirementNote, tennisHeader);
     });
     tennisClearBtn.addEventListener('click', () => {
         tennisInputs.forEach(inp => {
@@ -1090,7 +1091,6 @@ window.onload = function () {
     const mmaClearBtn = document.querySelector('#mma-clear');
     const mmaCopyBtn  = document.querySelector('#mma-copy');
     const mmaHeaderEl = document.querySelector('#head-mma');
-    let   mmaHzsChk   = document.querySelector('#mma-hzs-checkbox');
     const mmaInputs = document.querySelectorAll('.mma-fs');
     const mmaVals   = document.querySelectorAll('.mma-val');
     const mmaRadios = document.querySelectorAll('.mma-fcb');
@@ -1130,7 +1130,6 @@ window.onload = function () {
         const mmaHeader   = buildHeader(document.getElementById('mma-player-name').value);
         const mmaBreakdown = withHeader(mmaHeader, buildBreakdown(statLines, total, fcbLabel));
         showBreakdown('#mma-breakdown', '#mma-textarea-btn-cont', mmaBreakdown);
-        mmaHzsChk = setupHideZerosCheckbox(mmaHzsChk, '#mma-breakdown', statLines, mmaInputs, total, fcbLabel, mmaHeader);
     });
     mmaClearBtn.addEventListener('click', () => {
         mmaInputs.forEach(i => i.value = '');
