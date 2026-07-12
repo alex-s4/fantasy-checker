@@ -786,7 +786,7 @@ window.onload = function () {
 
         async function fetchBoxscore(gamePk) {
             if (boxscoreCache[gamePk]) return boxscoreCache[gamePk];
-            const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`);
+            const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`, { cache: 'no-store' } );
             if (!res.ok) throw new Error('boxscore request failed');
             const data = await res.json();
             boxscoreCache[gamePk] = data.teams || {};
