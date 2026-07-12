@@ -267,6 +267,15 @@ function canonicalPeriodOrder(foundSections) {
 //  UI WIRING
 // ============================================================
 window.onload = function () {
+    const headerEl    = document.querySelector('#head-gamebook');
+
+    /** Collapse/expand the card body — identical pattern to every card on index.html. */
+    function toggleSection(contentSelector) {
+        const el = document.querySelector(contentSelector);
+        el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    }
+    headerEl.addEventListener('click', () => toggleSection('#content-gamebook'));
+
     const fileInput   = document.querySelector('#gamebook-file-input');
     const dropZone    = document.querySelector('#gamebook-dropzone');
     const statusMsg   = document.querySelector('#gamebook-status');
@@ -355,4 +364,216 @@ window.onload = function () {
         if (file) handleFile(file);
     });
     dropZone.addEventListener('click', () => fileInput.click());
+
+    initRebootChecker();
 };
+
+// ============================================================
+//  MLB REBOOT CHECKER — plate appearances via ESPN play-by-play
+//
+//  Same date → game → team → player drill-down pattern as the
+//  NBA/NFL cards on index.html, but reading play-by-play instead
+//  of a boxscore stat line.
+//
+//  A play counts as a completed plate appearance when its outer
+//  `type.type` is "play-result" — this is ESPN's own category for
+//  the outcome of an at-bat (hit, out, BB, HBP, error, FC, sac,
+//  etc.) regardless of what the specific `alternativeType` says.
+//  Steals, wild pitches, balks, pickoffs, passed balls, mound
+//  visits, and substitutions are separate play types and don't
+//  carry type.type === "play-result", so they're excluded for free.
+//
+//  Reboot rule (2 or fewer PA before leaving): we can only count
+//  PAs reliably from play-by-play. Whether the player actually
+//  left the game — vs. the game just ending, or this being the
+//  final out — isn't reliably inferable from play-by-play alone,
+//  so that part is left for manual confirmation from the play list,
+//  same spirit as the DNP/Reboot flags above.
+//
+//  ASSUMPTION TO VERIFY: player display names are read from
+//  data.boxscore.players[].statistics[].athletes[], mirroring the
+//  shape ESPN's NBA/NFL summary endpoints use elsewhere in this
+//  codebase. This hasn't been tested against a live MLB summary
+//  response (ESPN isn't reachable from the sandbox this was built
+//  in). If names don't populate, the dropdown falls back to
+//  "Batter #<id>" — it'll still work, just say so and I'll patch
+//  athleteNameMap() once you've seen the real shape.
+// ============================================================
+function initRebootChecker() {
+    const dateInput    = document.querySelector('#reboot-date');
+    const loadGamesBtn = document.querySelector('#reboot-load-games-btn');
+    const gameRow      = document.querySelector('#reboot-game-row');
+    const gameSelect   = document.querySelector('#reboot-game-select');
+    const teamRow      = document.querySelector('#reboot-team-row');
+    const teamSelect   = document.querySelector('#reboot-team-select');
+    const playerRow    = document.querySelector('#reboot-player-row');
+    const playerSelect = document.querySelector('#reboot-player-select');
+    const fetchMsg     = document.querySelector('#reboot-fetch-msg');
+    const resultWrap   = document.querySelector('#reboot-result-wrap');
+    const flagLine     = document.querySelector('#reboot-flag-line');
+    const paBody       = document.querySelector('#reboot-pa-body');
+
+    function setMsg(msg, type = '') {
+        fetchMsg.textContent = msg;
+        fetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    let scoreboardCache = null; // last fetched scoreboard response
+    const summaryCache  = {};   // eventId -> summary response (boxscore + plays)
+
+    /** Convert an <input type="date"> value (YYYY-MM-DD) to ESPN's YYYYMMDD format. */
+    function toEspnDateParam(dateStr) {
+        return dateStr.replaceAll('-', '');
+    }
+
+    async function loadGames() {
+        const date = dateInput.value;
+        if (!date) { setMsg('Pick a date first.', 'error'); return; }
+
+        loadGamesBtn.disabled = true;
+        gameRow.style.display = 'none';
+        teamRow.style.display = 'none';
+        playerRow.style.display = 'none';
+        resultWrap.style.display = 'none';
+        gameSelect.innerHTML = '';
+        teamSelect.innerHTML = '';
+        playerSelect.innerHTML = '';
+        setMsg('Loading games…', 'loading');
+
+        try {
+            const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${toEspnDateParam(date)}`);
+            if (!res.ok) throw new Error('scoreboard request failed');
+            const data = await res.json();
+            scoreboardCache = data;
+
+            const events = data.events || [];
+            if (events.length === 0) {
+                setMsg(`No games found on ${date}.`, 'error');
+                return;
+            }
+
+            gameSelect.innerHTML = '<option value="">Select a game…</option>' +
+                events.map(ev => `<option value="${ev.id}">${ev.shortName || ev.name}</option>`).join('');
+            gameRow.style.display = 'flex';
+            setMsg(`Found ${events.length} game(s) on ${date}.`, 'success');
+        } catch (err) {
+            setMsg('Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+        } finally {
+            loadGamesBtn.disabled = false;
+        }
+    }
+    loadGamesBtn.addEventListener('click', loadGames);
+
+    gameSelect.addEventListener('change', () => {
+        const eventId = gameSelect.value;
+        teamSelect.innerHTML = '';
+        playerSelect.innerHTML = '';
+        teamRow.style.display = 'none';
+        playerRow.style.display = 'none';
+        resultWrap.style.display = 'none';
+        if (!eventId || !scoreboardCache) return;
+
+        const event = scoreboardCache.events.find(ev => ev.id === eventId);
+        const competitors = event?.competitions?.[0]?.competitors || [];
+        if (competitors.length === 0) return;
+
+        teamSelect.innerHTML = '<option value="">Select a team…</option>' +
+            competitors.map(c => `<option value="${c.team.id}">${c.team.displayName}</option>`).join('');
+        teamRow.style.display = 'flex';
+    });
+
+    async function fetchSummary(eventId) {
+        if (summaryCache[eventId]) return summaryCache[eventId];
+        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?lang=en&contentorigin=espn&event=${eventId}`);
+        if (!res.ok) throw new Error('summary request failed');
+        const data = await res.json();
+        summaryCache[eventId] = data;
+        return data;
+    }
+
+    /** Every plate-appearance-ending play for one team, keyed by batter athlete id. */
+    function batterPaMap(summary, teamId) {
+        const plays = summary?.plays || [];
+        const map = {}; // athleteId -> [play, ...]
+        plays.forEach(play => {
+            if (play.type?.type !== 'play-result') return;
+            if (String(play.team?.id) !== String(teamId)) return;
+            const batter = play.participants?.find(p => p.type === 'batter');
+            if (!batter) return;
+            const id = batter.athlete.id;
+            (map[id] ||= []).push(play);
+        });
+        return map;
+    }
+
+    /** Best-effort athlete id -> display name lookup from the boxscore block. See ASSUMPTION note above. */
+    function athleteNameMap(summary, teamId) {
+        const names = {};
+        const teamBlock = (summary.boxscore?.players || []).find(p => String(p.team?.id) === String(teamId));
+        (teamBlock?.statistics || []).forEach(stat => {
+            (stat.athletes || []).forEach(a => { names[a.athlete.id] = a.athlete.displayName; });
+        });
+        return names;
+    }
+
+    teamSelect.addEventListener('change', async () => {
+        const eventId = gameSelect.value;
+        const teamId  = teamSelect.value;
+        playerSelect.innerHTML = '';
+        playerRow.style.display = 'none';
+        resultWrap.style.display = 'none';
+        if (!eventId || !teamId) return;
+
+        setMsg('Loading batters…', 'loading');
+        try {
+            const summary = await fetchSummary(eventId);
+            const paMap   = batterPaMap(summary, teamId);
+            const names   = athleteNameMap(summary, teamId);
+            const ids     = Object.keys(paMap);
+
+            if (ids.length === 0) {
+                setMsg('No plate appearances found for that team.', 'error');
+                return;
+            }
+
+            playerSelect.innerHTML = '<option value="">Select a batter…</option>' +
+                ids.map(id => `<option value="${id}">${names[id] || `Batter #${id}`} (${paMap[id].length} PA)</option>`).join('');
+            playerRow.style.display = 'flex';
+            setMsg('Pick a batter to see their plate appearances.', '');
+        } catch (err) {
+            setMsg('Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+        }
+    });
+
+    playerSelect.addEventListener('change', () => {
+        const eventId   = gameSelect.value;
+        const teamId    = teamSelect.value;
+        const athleteId = playerSelect.value;
+        resultWrap.style.display = 'none';
+        if (!eventId || !teamId || !athleteId) return;
+
+        const summary = summaryCache[eventId];
+        const paMap   = batterPaMap(summary, teamId);
+        const plays   = (paMap[athleteId] || []).slice()
+            .sort((a, b) => Number(a.atBatId) - Number(b.atBatId)); // atBatId is monotonic across the whole game
+
+        const names = athleteNameMap(summary, teamId);
+        const name  = names[athleteId] || `Batter #${athleteId}`;
+
+        paBody.innerHTML = plays.map((p, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${p.period?.displayValue || ''}</td>
+                <td>${p.text || ''}</td>
+            </tr>
+        `).join('');
+
+        const eligible = plays.length <= 2;
+        flagLine.innerHTML = eligible
+            ? `<span class="manual-badge gamebook-flag-reboot">Reboot-eligible</span> ${name} recorded ${plays.length} PA — confirm from the plays below that they actually left the game.`
+            : `${name} recorded ${plays.length} PA — not Reboot-eligible (needs 2 or fewer).`;
+
+        resultWrap.style.display = 'block';
+        setMsg(`Loaded ${name}.`, 'success');
+    });
+}

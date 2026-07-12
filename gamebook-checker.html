@@ -60,10 +60,10 @@
 
           <p class="manual-note" style="margin-bottom:1rem;">
             <i class="fa-solid fa-circle-info"></i>
-            Upload the official NBA.com Game Book PDF for a game. This tool reads the
-            <strong>1Q, 2Q, 1H, 3Q, 1Q-3Q, 4Q, 2H,</strong> and <strong>FINAL</strong> box score
-            sections to show each player's minutes per period, flag full-game <strong>DNP</strong>,
-            and flag <strong>Reboot</strong> (played in the game, but zero minutes in the second half).
+            Upload the official NBA.com Game Book PDF for a game. This tool reads the box score
+            sections to show each player's minutes for <strong>FINAL, 1H, 2H, 1Q, 2Q, 3Q, 4Q</strong>,
+            and any overtime periods, flag full-game <strong>DNP</strong>,
+            and flag <strong>Reboot</strong> (played in the game, but zero minutes in the second half and every overtime period).
           </p>
 
           <div id="gamebook-dropzone" class="gamebook-dropzone">
@@ -84,6 +84,61 @@
 
         </div>
       </div>
+
+      <!-- ══════════════════════════════════════════════════
+          MLB REBOOT CHECKER (Plate Appearances)
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card calc-card--wide" style="width:100%; max-width:1060px;">
+        <div class="card-header open" id="head-reboot">
+          <img alt="MLB" src="https://static.prizepicks.com/images/leagues/production/25.svg" class="league-icon">
+          <h3>MLB Reboot Checker</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body open" id="content-reboot">
+
+          <p class="manual-note" style="margin-bottom:1rem;">
+            <i class="fa-solid fa-circle-info"></i>
+            Pulls play-by-play from ESPN to count a batter's plate appearances (PA) in a game.
+            A batter is <strong>Reboot-eligible</strong> if they left after <strong>2 or fewer PA</strong>.
+            This only counts PAs — confirm from the play list below that the player actually left
+            the game (vs. simply making the final out, or this being a postseason game).
+          </p>
+
+          <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date (ET) —</p>
+          <div class="fetch-row">
+            <input type="date" id="reboot-date" class="stat-input stat-input--full">
+          </div>
+
+          <div class="fetch-row" style="width:100%">
+            <button id="reboot-load-games-btn" type="button" class="btn btn-secondary btn-full">
+              <i class="fa-solid fa-list"></i> Load Games
+            </button>
+          </div>
+          <div class="fetch-row" id="reboot-game-row" style="display:none">
+            <select id="reboot-game-select" class="stat-input stat-input--full"></select>
+          </div>
+          <div class="fetch-row" id="reboot-team-row" style="display:none">
+            <select id="reboot-team-select" class="stat-input stat-input--full"></select>
+          </div>
+          <div class="fetch-row" id="reboot-player-row" style="display:none">
+            <select id="reboot-player-select" class="stat-input stat-input--full"></select>
+          </div>
+
+          <p id="reboot-fetch-msg" class="fetch-msg"></p>
+
+          <div id="reboot-result-wrap" style="display:none; margin-top:.75rem;">
+            <p id="reboot-flag-line" class="manual-note" style="margin-bottom:.6rem;"></p>
+            <div class="gamebook-table-wrap">
+              <table class="gamebook-table">
+                <thead><tr><th>#</th><th>Inning</th><th>Result</th></tr></thead>
+                <tbody id="reboot-pa-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>      
 
     </div><!-- /sections-grid -->
   </main>
