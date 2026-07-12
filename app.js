@@ -703,7 +703,7 @@ window.onload = function () {
     // ── MLB Drill-down (Date → League → Game → Team → Player) ──────
     // Shared by Hitter and Pitcher cards. `applyStats(statsObj)` is
     // caller-defined and writes the card-specific fields.
-    function initMlbDrillDown({ prefix, statCategory, goBtn, applyStats }) {
+    function initMlbDrillDown({ prefix, statCategory, goBtn, applyStats, startersOnly = false }) {
         const dateInput    = document.querySelector(`#${prefix}-date`);
         const loadGamesBtn = document.querySelector(`#${prefix}-load-games-btn`);
         const gameRow      = document.querySelector(`#${prefix}-game-row`);
@@ -804,10 +804,20 @@ window.onload = function () {
             try {
                 const teams   = await fetchBoxscore(gamePk);
                 const players = Object.values(teams[homeAway]?.players || {});
-                const active  = players.filter(p => Object.keys(p.stats?.[statCategory] || {}).length > 0);
+                const active  = players.filter(p => {
+                    const hasStats = Object.keys(p.stats?.[statCategory] || {}).length > 0;
+                    if (!hasStats) return false;
+                    // MLB's battingOrder ends in "00" for the original starter in that
+                    // lineup slot; any other suffix means they entered as a substitute
+                    // (pinch hitter, defensive replacement, etc.) — DNP-ineligible
+                    // regardless of plate appearances, per league rule.
+                    if (startersOnly) return p.battingOrder?.endsWith('00');
+                    return true;
+                });
 
                 if (active.length === 0) {
-                    setMsg(`No ${statCategory === 'pitching' ? 'pitchers' : 'batters'} with stats found for that team.`, 'error');
+                    const noun = statCategory === 'pitching' ? 'pitchers' : (startersOnly ? 'starting batters' : 'batters');
+                    setMsg(`No ${noun} with stats found for that team.`, 'error');
                     return;
                 }
 
@@ -917,6 +927,7 @@ window.onload = function () {
         prefix: 'bsballh',
         statCategory: 'batting',
         goBtn: bsballhGoBtn,
+        startersOnly: true,
         applyStats(s) {
             const singles = Math.max(0, (s.hits || 0) - (s.doubles || 0) - (s.triples || 0) - (s.homeRuns || 0));
             bsballhSing.value = singles;

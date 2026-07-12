@@ -50,13 +50,13 @@
            GAMEBOOK UPLOAD + RESULTS
       ══════════════════════════════════════════════════ -->
       <div class="calc-card calc-card--wide" style="width:100%; max-width:1060px;">
-        <div class="card-header open" id="head-gamebook">
+        <div class="card-header" id="head-gamebook">
           <img alt="NBA" src="https://static.prizepicks.com/images/leagues/production/1.svg" class="league-icon">
           <h3>Upload NBA/WNBA Official Gamebook PDF</h3>
           <i class="fa-solid fa-chevron-down collapse-icon"></i>
         </div>
 
-        <div class="card-body open" id="content-gamebook">
+        <div class="card-body" id="content-gamebook">
 
           <p class="manual-note" style="margin-bottom:1rem;">
             <i class="fa-solid fa-circle-info"></i>
@@ -86,59 +86,54 @@
       </div>
 
       <!-- ══════════════════════════════════════════════════
-          MLB REBOOT CHECKER (Plate Appearances)
+           MLB PINCH-HIT / DNP CHECKER
       ══════════════════════════════════════════════════ -->
       <div class="calc-card calc-card--wide" style="width:100%; max-width:1060px;">
-        <div class="card-header open" id="head-reboot">
+        <div class="card-header" id="head-mlbdnp">
           <img alt="MLB" src="https://static.prizepicks.com/images/leagues/production/25.svg" class="league-icon">
-          <h3>MLB Reboot Checker</h3>
+          <h3>MLB Pinch-Hit / DNP Checker</h3>
           <i class="fa-solid fa-chevron-down collapse-icon"></i>
         </div>
 
-        <div class="card-body open" id="content-reboot">
+        <div class="card-body" id="content-mlbdnp">
 
           <p class="manual-note" style="margin-bottom:1rem;">
             <i class="fa-solid fa-circle-info"></i>
-            Pulls play-by-play from ESPN to count a batter's plate appearances (PA) in a game.
-            A batter is <strong>Reboot-eligible</strong> if they left after <strong>2 or fewer PA</strong>.
-            This only counts PAs — confirm from the play list below that the player actually left
-            the game (vs. simply making the final out, or this being a postseason game).
+            Pick a date, game, and team to see every batter's eligibility, pulled live from MLB's
+            official box score. A player must be in the <strong>starting lineup</strong> to be
+            eligible — <strong>pinch hitters and substitutes are DNP regardless of plate appearances</strong>.
+            <strong>Reboot</strong> applies only to starters: it flags a starter with
+            <strong>2 or fewer plate appearances</strong>.
           </p>
 
           <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date (ET) —</p>
           <div class="fetch-row">
-            <input type="date" id="reboot-date" class="stat-input stat-input--full">
+            <input type="date" id="mlbdnp-date" class="stat-input stat-input--full">
           </div>
 
           <div class="fetch-row" style="width:100%">
-            <button id="reboot-load-games-btn" type="button" class="btn btn-secondary btn-full">
+            <button id="mlbdnp-load-games-btn" type="button" class="btn btn-secondary btn-full">
               <i class="fa-solid fa-list"></i> Load Games
             </button>
           </div>
-          <div class="fetch-row" id="reboot-game-row" style="display:none">
-            <select id="reboot-game-select" class="stat-input stat-input--full"></select>
+          <div class="fetch-row" id="mlbdnp-game-row" style="display:none">
+            <select id="mlbdnp-game-select" class="stat-input stat-input--full"></select>
           </div>
-          <div class="fetch-row" id="reboot-team-row" style="display:none">
-            <select id="reboot-team-select" class="stat-input stat-input--full"></select>
-          </div>
-          <div class="fetch-row" id="reboot-player-row" style="display:none">
-            <select id="reboot-player-select" class="stat-input stat-input--full"></select>
+          <div class="fetch-row" id="mlbdnp-team-row" style="display:none">
+            <select id="mlbdnp-team-select" class="stat-input stat-input--full"></select>
           </div>
 
-          <p id="reboot-fetch-msg" class="fetch-msg"></p>
+          <p id="mlbdnp-fetch-msg" class="fetch-msg"></p>
 
-          <div id="reboot-result-wrap" style="display:none; margin-top:.75rem;">
-            <p id="reboot-flag-line" class="manual-note" style="margin-bottom:.6rem;"></p>
-            <div class="gamebook-table-wrap">
-              <table class="gamebook-table">
-                <thead><tr><th>#</th><th>Inning</th><th>Result</th></tr></thead>
-                <tbody id="reboot-pa-body"></tbody>
-              </table>
-            </div>
+          <div id="mlbdnp-results-wrap" class="gamebook-table-wrap" style="display:none;">
+            <table class="gamebook-table">
+              <thead id="mlbdnp-results-head"></thead>
+              <tbody id="mlbdnp-results-body"></tbody>
+            </table>
           </div>
 
         </div>
-      </div>      
+      </div>
 
     </div><!-- /sections-grid -->
   </main>

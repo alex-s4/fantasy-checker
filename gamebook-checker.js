@@ -267,17 +267,14 @@ function canonicalPeriodOrder(foundSections) {
 //  UI WIRING
 // ============================================================
 window.onload = function () {
-    const headerEl    = document.querySelector('#head-gamebook');
-    const headerRebootEl    = document.querySelector('#head-reboot');
+    const gamebookHeaderEl = document.querySelector('#head-gamebook');
 
-    /** Collapse/expand the card body — identical pattern to every card on index.html. */
+    /** Collapse/expand a card body — identical pattern to every card on index.html. */
     function toggleSection(contentSelector) {
         const el = document.querySelector(contentSelector);
         el.style.display = (el.style.display === 'block') ? 'none' : 'block';
     }
-
-    headerEl.addEventListener('click', () => toggleSection('#content-gamebook'));
-    headerRebootEl.addEventListener('click', () => toggleSection('#content-reboot'));
+    gamebookHeaderEl.addEventListener('click', () => toggleSection('#content-gamebook'));
 
     const fileInput   = document.querySelector('#gamebook-file-input');
     const dropZone    = document.querySelector('#gamebook-dropzone');
@@ -368,215 +365,188 @@ window.onload = function () {
     });
     dropZone.addEventListener('click', () => fileInput.click());
 
-    initRebootChecker();
-};
+    // ============================================================
+    //  MLB Pinch-Hit / DNP Checker (live MLB Stats API lookup —
+    //  no PDF involved, unlike the NBA/WNBA checker above)
+    // ============================================================
+    const MLB_API = 'https://statsapi.mlb.com/api/v1';
+    const MLBDNP_REBOOT_PA_THRESHOLD = 2;
 
-// ============================================================
-//  MLB REBOOT CHECKER — plate appearances via ESPN play-by-play
-//
-//  Same date → game → team → player drill-down pattern as the
-//  NBA/NFL cards on index.html, but reading play-by-play instead
-//  of a boxscore stat line.
-//
-//  A play counts as a completed plate appearance when its outer
-//  `type.type` is "play-result" — this is ESPN's own category for
-//  the outcome of an at-bat (hit, out, BB, HBP, error, FC, sac,
-//  etc.) regardless of what the specific `alternativeType` says.
-//  Steals, wild pitches, balks, pickoffs, passed balls, mound
-//  visits, and substitutions are separate play types and don't
-//  carry type.type === "play-result", so they're excluded for free.
-//
-//  Reboot rule (2 or fewer PA before leaving): we can only count
-//  PAs reliably from play-by-play. Whether the player actually
-//  left the game — vs. the game just ending, or this being the
-//  final out — isn't reliably inferable from play-by-play alone,
-//  so that part is left for manual confirmation from the play list,
-//  same spirit as the DNP/Reboot flags above.
-//
-//  ASSUMPTION TO VERIFY: player display names are read from
-//  data.boxscore.players[].statistics[].athletes[], mirroring the
-//  shape ESPN's NBA/NFL summary endpoints use elsewhere in this
-//  codebase. This hasn't been tested against a live MLB summary
-//  response (ESPN isn't reachable from the sandbox this was built
-//  in). If names don't populate, the dropdown falls back to
-//  "Batter #<id>" — it'll still work, just say so and I'll patch
-//  athleteNameMap() once you've seen the real shape.
-// ============================================================
-function initRebootChecker() {
-    const dateInput    = document.querySelector('#reboot-date');
-    const loadGamesBtn = document.querySelector('#reboot-load-games-btn');
-    const gameRow      = document.querySelector('#reboot-game-row');
-    const gameSelect   = document.querySelector('#reboot-game-select');
-    const teamRow      = document.querySelector('#reboot-team-row');
-    const teamSelect   = document.querySelector('#reboot-team-select');
-    const playerRow    = document.querySelector('#reboot-player-row');
-    const playerSelect = document.querySelector('#reboot-player-select');
-    const fetchMsg     = document.querySelector('#reboot-fetch-msg');
-    const resultWrap   = document.querySelector('#reboot-result-wrap');
-    const flagLine     = document.querySelector('#reboot-flag-line');
-    const paBody       = document.querySelector('#reboot-pa-body');
+    const mlbdnpHeaderEl    = document.querySelector('#head-mlbdnp');
+    const mlbdnpDateInput   = document.querySelector('#mlbdnp-date');
+    const mlbdnpLoadBtn     = document.querySelector('#mlbdnp-load-games-btn');
+    const mlbdnpGameRow     = document.querySelector('#mlbdnp-game-row');
+    const mlbdnpGameSelect  = document.querySelector('#mlbdnp-game-select');
+    const mlbdnpTeamRow     = document.querySelector('#mlbdnp-team-row');
+    const mlbdnpTeamSelect  = document.querySelector('#mlbdnp-team-select');
+    const mlbdnpFetchMsg    = document.querySelector('#mlbdnp-fetch-msg');
+    const mlbdnpResultsWrap = document.querySelector('#mlbdnp-results-wrap');
+    const mlbdnpResultsHead = document.querySelector('#mlbdnp-results-head');
+    const mlbdnpResultsBody = document.querySelector('#mlbdnp-results-body');
 
-    function setMsg(msg, type = '') {
-        fetchMsg.textContent = msg;
-        fetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    mlbdnpHeaderEl.addEventListener('click', () => toggleSection('#content-mlbdnp'));
+
+    function setMlbdnpMsg(msg, type = '') {
+        mlbdnpFetchMsg.textContent = msg;
+        mlbdnpFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
     }
 
-    let scoreboardCache = null; // last fetched scoreboard response
-    const summaryCache  = {};   // eventId -> summary response (boxscore + plays)
+    let mlbdnpGamesCache = {};
+    let mlbdnpBoxscoreCache = {};
 
-    /** Convert an <input type="date"> value (YYYY-MM-DD) to ESPN's YYYYMMDD format. */
-    function toEspnDateParam(dateStr) {
-        return dateStr.replaceAll('-', '');
-    }
+    async function loadMlbdnpGames() {
+        const date = mlbdnpDateInput.value;
+        if (!date) { setMlbdnpMsg('Pick a date first.', 'error'); return; }
 
-    async function loadGames() {
-        const date = dateInput.value;
-        if (!date) { setMsg('Pick a date first.', 'error'); return; }
-
-        loadGamesBtn.disabled = true;
-        gameRow.style.display = 'none';
-        teamRow.style.display = 'none';
-        playerRow.style.display = 'none';
-        resultWrap.style.display = 'none';
-        gameSelect.innerHTML = '';
-        teamSelect.innerHTML = '';
-        playerSelect.innerHTML = '';
-        setMsg('Loading games…', 'loading');
+        mlbdnpLoadBtn.disabled = true;
+        mlbdnpGameRow.style.display = 'none';
+        mlbdnpTeamRow.style.display = 'none';
+        mlbdnpResultsWrap.style.display = 'none';
+        mlbdnpGameSelect.innerHTML = '';
+        mlbdnpTeamSelect.innerHTML = '';
+        setMlbdnpMsg('Loading games…', 'loading');
 
         try {
-            const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard?dates=${toEspnDateParam(date)}`);
-            if (!res.ok) throw new Error('scoreboard request failed');
+            const res = await fetch(`${MLB_API}/schedule?sportId=1&date=${date}`);
+            if (!res.ok) throw new Error('schedule request failed');
             const data = await res.json();
-            scoreboardCache = data;
+            const games = data.dates?.[0]?.games || [];
+            mlbdnpGamesCache = {};
+            games.forEach(g => { mlbdnpGamesCache[g.gamePk] = g; });
 
-            const events = data.events || [];
-            if (events.length === 0) {
-                setMsg(`No games found on ${date}.`, 'error');
+            if (games.length === 0) {
+                setMlbdnpMsg(`No games found on ${date}.`, 'error');
                 return;
             }
 
-            gameSelect.innerHTML = '<option value="">Select a game…</option>' +
-                events.map(ev => `<option value="${ev.id}">${ev.shortName || ev.name}</option>`).join('');
-            gameRow.style.display = 'flex';
-            setMsg(`Found ${events.length} game(s) on ${date}.`, 'success');
+            mlbdnpGameSelect.innerHTML = '<option value="">Select a game…</option>' +
+                games.map(g => {
+                    const dhSuffix = g.doubleHeader !== 'N' ? ` (Game ${g.gameNumber})` : '';
+                    return `<option value="${g.gamePk}">${g.teams.away.team.name} @ ${g.teams.home.team.name}${dhSuffix}</option>`;
+                }).join('');
+            mlbdnpGameRow.style.display = 'flex';
+            setMlbdnpMsg(`Found ${games.length} game(s) on ${date}.`, 'success');
         } catch (err) {
-            setMsg('Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+            setMlbdnpMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
         } finally {
-            loadGamesBtn.disabled = false;
+            mlbdnpLoadBtn.disabled = false;
         }
     }
-    loadGamesBtn.addEventListener('click', loadGames);
+    mlbdnpLoadBtn.addEventListener('click', loadMlbdnpGames);
 
-    gameSelect.addEventListener('change', () => {
-        const eventId = gameSelect.value;
-        teamSelect.innerHTML = '';
-        playerSelect.innerHTML = '';
-        teamRow.style.display = 'none';
-        playerRow.style.display = 'none';
-        resultWrap.style.display = 'none';
-        if (!eventId || !scoreboardCache) return;
+    mlbdnpGameSelect.addEventListener('change', () => {
+        const gamePk = mlbdnpGameSelect.value;
+        mlbdnpTeamSelect.innerHTML = '';
+        mlbdnpTeamRow.style.display = 'none';
+        mlbdnpResultsWrap.style.display = 'none';
+        if (!gamePk || !mlbdnpGamesCache[gamePk]) return;
 
-        const event = scoreboardCache.events.find(ev => ev.id === eventId);
-        const competitors = event?.competitions?.[0]?.competitors || [];
-        if (competitors.length === 0) return;
-
-        teamSelect.innerHTML = '<option value="">Select a team…</option>' +
-            competitors.map(c => `<option value="${c.team.id}">${c.team.displayName}</option>`).join('');
-        teamRow.style.display = 'flex';
+        const g = mlbdnpGamesCache[gamePk];
+        mlbdnpTeamSelect.innerHTML = '<option value="">Select a team…</option>' +
+            `<option value="away">${g.teams.away.team.name}</option>` +
+            `<option value="home">${g.teams.home.team.name}</option>`;
+        mlbdnpTeamRow.style.display = 'flex';
     });
 
-    async function fetchSummary(eventId) {
-        if (summaryCache[eventId]) return summaryCache[eventId];
-        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?lang=en&contentorigin=espn&event=${eventId}`);
-        if (!res.ok) throw new Error('summary request failed');
+    async function fetchMlbdnpBoxscore(gamePk) {
+        if (mlbdnpBoxscoreCache[gamePk]) return mlbdnpBoxscoreCache[gamePk];
+        const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`);
+        if (!res.ok) throw new Error('boxscore request failed');
         const data = await res.json();
-        summaryCache[eventId] = data;
-        return data;
+        mlbdnpBoxscoreCache[gamePk] = data.teams || {};
+        return mlbdnpBoxscoreCache[gamePk];
     }
 
-    /** Every plate-appearance-ending play for one team, keyed by batter athlete id. */
-    function batterPaMap(summary, teamId) {
-        const plays = summary?.plays || [];
-        const map = {}; // athleteId -> [play, ...]
-        plays.forEach(play => {
-            if (play.type?.type !== 'play-result') return;
-            if (String(play.team?.id) !== String(teamId)) return;
-            const batter = play.participants?.find(p => p.type === 'batter');
-            if (!batter) return;
-            const id = batter.athlete.id;
-            (map[id] ||= []).push(play);
-        });
-        return map;
+    /**
+     * Classify a player's batting eligibility from MLB boxscore fields.
+     * - battingOrder ending in "00" -> the original starter in that lineup
+     *   slot (eligible).
+     * - battingOrder present but not ending "00" -> substituted into the
+     *   lineup (pinch hitter, defensive replacement, etc.) — DNP regardless
+     *   of plate appearances, per league rule.
+     * - No battingOrder at all -> never occupied a lineup spot (full DNP,
+     *   e.g. a reliever who didn't pitch, or a position player who never
+     *   entered the game).
+     * - The one unverified edge case: batting stats present with no
+     *   battingOrder field. Not observed in real data so far — flagged as
+     *   "Check" rather than guessed at.
+     */
+    function classifyMlbdnpBatter(p) {
+        const hasBattingStats = Object.keys(p.stats?.batting || {}).length > 0;
+        if (!p.battingOrder) {
+            return hasBattingStats
+                ? { label: 'Check', cls: 'gamebook-flag-warn' }
+                : { label: 'DNP', cls: 'gamebook-flag-dnp' };
+        }
+        if (p.battingOrder.endsWith('00')) return { label: 'Starter', cls: '' };
+        return { label: 'Not a Starter / DNP', cls: 'gamebook-flag-dnp' };
     }
 
-    /** Best-effort athlete id -> display name lookup from the boxscore block. See ASSUMPTION note above. */
-    function athleteNameMap(summary, teamId) {
-        const names = {};
-        const teamBlock = (summary.boxscore?.players || []).find(p => String(p.team?.id) === String(teamId));
-        (teamBlock?.statistics || []).forEach(stat => {
-            (stat.athletes || []).forEach(a => { names[a.athlete.id] = a.athlete.displayName; });
-        });
-        return names;
+    /**
+     * Reboot applies only to starters, and is purely a plate-appearance
+     * threshold: a starter with MLBDNP_REBOOT_PA_THRESHOLD (2) or fewer PA
+     * is a Reboot, regardless of why (pulled early, injury, etc.). Returns
+     * null for anyone who isn't a starter (not applicable).
+     */
+    function isMlbdnpReboot(p) {
+        if (!p.battingOrder || !p.battingOrder.endsWith('00')) return null;
+        const pa = p.stats?.batting?.plateAppearances ?? 0;
+        return pa <= MLBDNP_REBOOT_PA_THRESHOLD;
     }
 
-    teamSelect.addEventListener('change', async () => {
-        const eventId = gameSelect.value;
-        const teamId  = teamSelect.value;
-        playerSelect.innerHTML = '';
-        playerRow.style.display = 'none';
-        resultWrap.style.display = 'none';
-        if (!eventId || !teamId) return;
+    mlbdnpTeamSelect.addEventListener('change', async () => {
+        const gamePk   = mlbdnpGameSelect.value;
+        const homeAway = mlbdnpTeamSelect.value;
+        mlbdnpResultsWrap.style.display = 'none';
+        mlbdnpResultsBody.innerHTML = '';
+        if (!gamePk || !homeAway) return;
 
-        setMsg('Loading batters…', 'loading');
+        setMlbdnpMsg('Loading roster…', 'loading');
         try {
-            const summary = await fetchSummary(eventId);
-            const paMap   = batterPaMap(summary, teamId);
-            const names   = athleteNameMap(summary, teamId);
-            const ids     = Object.keys(paMap);
+            const teams   = await fetchMlbdnpBoxscore(gamePk);
+            const players = Object.values(teams[homeAway]?.players || {});
+            // Only players relevant to the batting lineup — excludes pure
+            // relief pitchers who never occupied a batting-order slot and
+            // never recorded a plate appearance.
+            const batters = players.filter(p => p.battingOrder || Object.keys(p.stats?.batting || {}).length > 0);
 
-            if (ids.length === 0) {
-                setMsg('No plate appearances found for that team.', 'error');
+            if (batters.length === 0) {
+                setMlbdnpMsg('No batters found for that team.', 'error');
                 return;
             }
 
-            playerSelect.innerHTML = '<option value="">Select a batter…</option>' +
-                ids.map(id => `<option value="${id}">${names[id] || `Batter #${id}`} (${paMap[id].length} PA)</option>`).join('');
-            playerRow.style.display = 'flex';
-            setMsg('Pick a batter to see their plate appearances.', '');
+            batters.sort((a, b) => (a.battingOrder || '999').localeCompare(b.battingOrder || '999'));
+
+            mlbdnpResultsHead.innerHTML = '<tr><th>#</th><th>Player</th><th>Status</th><th>PA</th><th>Reboot</th></tr>';
+            mlbdnpResultsBody.innerHTML = batters.map(p => {
+                const status = classifyMlbdnpBatter(p);
+                const badge  = status.cls ? `<span class="manual-badge ${status.cls}">${status.label}</span>` : status.label;
+
+                const pa = Object.keys(p.stats?.batting || {}).length > 0
+                    ? (p.stats.batting.plateAppearances ?? 0)
+                    : '—';
+
+                let rebootCell = '—';
+                if (status.label === 'Starter') {
+                    const reboot = isMlbdnpReboot(p);
+                    rebootCell = reboot
+                        ? '<span class="manual-badge gamebook-flag-reboot">Reboot</span>'
+                        : 'Full Game';
+                }
+
+                return `<tr>
+                    <td>#${p.jerseyNumber || '-'}</td>
+                    <td>${p.person.fullName}</td>
+                    <td>${badge}</td>
+                    <td>${pa}</td>
+                    <td>${rebootCell}</td>
+                </tr>`;
+            }).join('');
+
+            mlbdnpResultsWrap.style.display = 'block';
+            setMlbdnpMsg(`Loaded ${batters.length} batter(s).`, 'success');
         } catch (err) {
-            setMsg('Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+            setMlbdnpMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
         }
     });
-
-    playerSelect.addEventListener('change', () => {
-        const eventId   = gameSelect.value;
-        const teamId    = teamSelect.value;
-        const athleteId = playerSelect.value;
-        resultWrap.style.display = 'none';
-        if (!eventId || !teamId || !athleteId) return;
-
-        const summary = summaryCache[eventId];
-        const paMap   = batterPaMap(summary, teamId);
-        const plays   = (paMap[athleteId] || []).slice()
-            .sort((a, b) => Number(a.atBatId) - Number(b.atBatId)); // atBatId is monotonic across the whole game
-
-        const names = athleteNameMap(summary, teamId);
-        const name  = names[athleteId] || `Batter #${athleteId}`;
-
-        paBody.innerHTML = plays.map((p, i) => `
-            <tr>
-                <td>${i + 1}</td>
-                <td>${p.period?.displayValue || ''}</td>
-                <td>${p.text || ''}</td>
-            </tr>
-        `).join('');
-
-        const eligible = plays.length <= 2;
-        flagLine.innerHTML = eligible
-            ? `<span class="manual-badge gamebook-flag-reboot">Reboot-eligible</span> ${name} recorded ${plays.length} PA — confirm from the plays below that they actually left the game.`
-            : `${name} recorded ${plays.length} PA — not Reboot-eligible (needs 2 or fewer).`;
-
-        resultWrap.style.display = 'block';
-        setMsg(`Loaded ${name}.`, 'success');
-    });
-}
+};
