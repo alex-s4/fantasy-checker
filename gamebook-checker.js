@@ -546,7 +546,7 @@ window.onload = function () {
                     const reboot = isMlbdnpReboot(p);
                     rebootCell = reboot
                         ? '<span class="manual-badge gamebook-flag-reboot">Reboot</span>'
-                        : 'Full Game';
+                        : 'N/A';
                 }
 
                 return `<tr>

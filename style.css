@@ -854,8 +854,8 @@ a.popover-btn { padding: 0 0 0 6px; }
 
 /* ── Gamebook Checker — Flag badges (reuses .manual-badge base) ── */
 .gamebook-flag-dnp {
-  color: var(--text-muted);
-  border-color: var(--border-input);
+  color: var(--green);
+  border-color: var(--green);
 }
 .gamebook-flag-reboot {
   color: var(--yellow);
