@@ -365,6 +365,21 @@ window.onload = function () {
     });
     dropZone.addEventListener('click', () => fileInput.click());
 
+    // --------------------------------------------------------
+    //  DEFAULT DATES — today in Eastern Time
+    // --------------------------------------------------------
+    function getTodayEasternDateStr() {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/New_York',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(new Date());
+    }
+    const todayET = getTodayEasternDateStr();
+    ['#mlbdnp-date'].forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.value = todayET;
+    });
+
     // ============================================================
     //  MLB Pinch-Hit / DNP Checker (live MLB Stats API lookup —
     //  no PDF involved, unlike the NBA/WNBA checker above)
