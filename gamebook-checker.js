@@ -268,13 +268,16 @@ function canonicalPeriodOrder(foundSections) {
 // ============================================================
 window.onload = function () {
     const headerEl    = document.querySelector('#head-gamebook');
+    const headerRebootEl    = document.querySelector('#head-reboot');
 
     /** Collapse/expand the card body — identical pattern to every card on index.html. */
     function toggleSection(contentSelector) {
         const el = document.querySelector(contentSelector);
         el.style.display = (el.style.display === 'block') ? 'none' : 'block';
     }
+
     headerEl.addEventListener('click', () => toggleSection('#content-gamebook'));
+    headerRebootEl.addEventListener('click', () => toggleSection('#content-reboot'));
 
     const fileInput   = document.querySelector('#gamebook-file-input');
     const dropZone    = document.querySelector('#gamebook-dropzone');
