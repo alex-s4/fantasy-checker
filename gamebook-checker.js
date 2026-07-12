@@ -272,7 +272,11 @@ window.onload = function () {
     /** Collapse/expand a card body — identical pattern to every card on index.html. */
     function toggleSection(contentSelector) {
         const el = document.querySelector(contentSelector);
-        el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        const header = el.previousElementSibling; // .card-header sits right before .card-body
+        el.classList.toggle('open');
+        if (header && header.classList.contains('card-header')) {
+            header.classList.toggle('open');
+        }
     }
     gamebookHeaderEl.addEventListener('click', () => toggleSection('#content-gamebook'));
 
@@ -378,7 +382,7 @@ window.onload = function () {
     ['#mlbdnp-date'].forEach(sel => {
         const el = document.querySelector(sel);
         if (el) el.value = todayET;
-    });
+    });    
 
     // ============================================================
     //  MLB Pinch-Hit / DNP Checker (live MLB Stats API lookup —
@@ -408,42 +412,6 @@ window.onload = function () {
 
     let mlbdnpGamesCache = {};
     let mlbdnpBoxscoreCache = {};
-    let mlbdnpPaCountsCache = {};
-
-    /** Format a game's ET start time, e.g. "7:10 PM ET" — helps disambiguate
-     *  games when the viewer's local timezone differs from Eastern. */
-    function formatMlbdnpGameTime(g) {
-        return new Intl.DateTimeFormat('en-US', {
-            timeZone: 'America/New_York',
-            hour: 'numeric',
-            minute: '2-digit',
-        }).format(new Date(g.gameDate)) + ' ET';
-    }
-
-    /** Build the dropdown label for a game: teams, doubleheader suffix, and
-     *  either the final score (if the game's over) or its ET start time
-     *  (otherwise) — both as a reference to confirm you've picked the right
-     *  game before drilling into players. */
-    function formatMlbdnpGameLabel(g) {
-        const dhSuffix  = g.doubleHeader !== 'N' ? ` (Game ${g.gameNumber})` : '';
-        const away      = g.teams.away.team.name;
-        const home      = g.teams.home.team.name;
-        const state     = g.status?.detailedState || '';
-        const awayScore = g.teams.away.score;
-        const homeScore = g.teams.home.score;
-        const hasScore  = awayScore != null && homeScore != null;
-
-        let suffix;
-        if (state.startsWith('Final') && hasScore) {
-            suffix = ` — Final ${awayScore}-${homeScore}`;
-        } else if (state === 'In Progress' && hasScore) {
-            suffix = ` — In Progress ${awayScore}-${homeScore}`;
-        } else {
-            suffix = ` — ${formatMlbdnpGameTime(g)}`;
-        }
-
-        return `${away} @ ${home}${dhSuffix}${suffix}`;
-    }
 
     async function loadMlbdnpGames() {
         const date = mlbdnpDateInput.value;
@@ -470,8 +438,11 @@ window.onload = function () {
                 return;
             }
 
-        mlbdnpGameSelect.innerHTML = '<option value="">Select a game…</option>' +
-            games.map(g => `<option value="${g.gamePk}">${formatMlbdnpGameLabel(g)}</option>`).join('');
+            mlbdnpGameSelect.innerHTML = '<option value="">Select a game…</option>' +
+                games.map(g => {
+                    const dhSuffix = g.doubleHeader !== 'N' ? ` (Game ${g.gameNumber})` : '';
+                    return `<option value="${g.gamePk}">${g.teams.away.team.name} @ ${g.teams.home.team.name}${dhSuffix}</option>`;
+                }).join('');
             mlbdnpGameRow.style.display = 'flex';
             setMlbdnpMsg(`Found ${games.length} game(s) on ${date}.`, 'success');
         } catch (err) {
@@ -498,28 +469,11 @@ window.onload = function () {
 
     async function fetchMlbdnpBoxscore(gamePk) {
         if (mlbdnpBoxscoreCache[gamePk]) return mlbdnpBoxscoreCache[gamePk];
-        const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`, { cache: 'no-store' });
+        const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`);
         if (!res.ok) throw new Error('boxscore request failed');
         const data = await res.json();
         mlbdnpBoxscoreCache[gamePk] = data.teams || {};
         return mlbdnpBoxscoreCache[gamePk];
-    }
-
-    async function fetchMlbdnpPaCounts(gamePk) {
-        if (mlbdnpPaCountsCache[gamePk]) return mlbdnpPaCountsCache[gamePk];
-        const res = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${gamePk}/feed/live`, { cache: 'no-store' });
-        if (!res.ok) throw new Error('play-by-play request failed');
-        const data = await res.json();
-        const plays = data.liveData?.plays?.allPlays || [];
-        const paCounts = {};
-        plays.forEach(play => {
-            if (!play.about?.isComplete) return;
-            const batterId = play.matchup?.batter?.id;
-            if (batterId == null) return;
-            paCounts[batterId] = (paCounts[batterId] || 0) + 1;
-        });
-        mlbdnpPaCountsCache[gamePk] = paCounts;
-        return paCounts;
     }
 
     /**
@@ -596,7 +550,7 @@ window.onload = function () {
                     const reboot = isMlbdnpReboot(p);
                     rebootCell = reboot
                         ? '<span class="manual-badge gamebook-flag-reboot">Reboot</span>'
-                        : 'N/A';
+                        : 'Full Game';
                 }
 
                 return `<tr>

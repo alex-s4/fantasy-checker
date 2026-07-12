@@ -175,6 +175,233 @@ window.onload = function () {
 
 
     // ========================================================
+    //  NHL — TOI REPORT IMPORT (nhl.com official HTM reports)
+    // ========================================================
+    //
+    // NHL's htmlreports pages are old, deeply-nested legacy HTML (not an
+    // API) and don't appear to send Access-Control-Allow-Origin headers,
+    // so a direct browser fetch() will very likely be blocked by CORS —
+    // same class of problem as stats.nba.com elsewhere in this codebase.
+    // We still try fetch() first since it's the smoothest path when it
+    // works, but fall back to a "paste the page source" textarea (same
+    // parser either way) when it doesn't.
+    //
+    // Parsing strategy: rather than relying on the exact table nesting
+    // (which is fragile on this kind of legacy markup), walk every <tr>
+    // in the document in order and track "current player" state as we go.
+    // A row whose full text matches "<jersey#> LASTNAME, First" starts a
+    // new player; subsequent rows starting with a period number or "TOT"
+    // (from that player's own Per/SHF/AVG/TOI/EV/PP/SH summary table) are
+    // recorded under that player until the next player heading appears.
+    // Periods 1-3 are always regulation; anything from period 4 onward is
+    // overtime, whether that's a single 3v3 OT (regular season) or several
+    // full OT periods (playoffs).
+
+    const toiImportUrlInput    = document.querySelector('#toi-import-url');
+    const toiImportLoadBtn     = document.querySelector('#toi-import-load');
+    const toiImportClearBtn    = document.querySelector('#toi-import-clear');
+    const toiImportMsg         = document.querySelector('#toi-import-msg');
+    const toiImportFallback    = document.querySelector('#toi-import-fallback');
+    const toiImportHtmlInput   = document.querySelector('#toi-import-html');
+    const toiImportParseBtn    = document.querySelector('#toi-import-parse-fallback');
+    const toiImportResultsWrap = document.querySelector('#toi-import-results');
+    const toiImportResultsHead = document.querySelector('#toi-import-results-head');
+    const toiImportResultsBody = document.querySelector('#toi-import-results-body');
+
+    /** "4:12" -> 252 */
+    function timeStrToSecs(str) {
+        const [m, s] = str.split(':').map(Number);
+        return (m * 60) + s;
+    }
+
+    /** 252 -> "4:12" */
+    function secsToMmSs(totalSecs) {
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
+        return `${mins}:${padSecs(secs)}`;
+    }
+
+    /** 252 -> "4.20" (mm.dd decimal, e.g. 4:12 = 4 + 12/60 = 4.20) */
+    function secsToDecimalStr(totalSecs) {
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
+        return `${mins}.${secsToDecStr(secs)}`;
+    }
+
+    /** "mm:ss = <span class=decimal>m.d</span>" — decimal highlighted since
+     *  that's the value actually needed for PrizePicks. */
+    function formatToiCell(totalSecs) {
+        return `${secsToMmSs(totalSecs)} = <span class="toi-dec-highlight">${secsToDecimalStr(totalSecs)}</span>`;
+    }
+
+    function setToiImportMsg(msg, type) {
+        toiImportMsg.textContent = msg;
+        toiImportMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    /** Find the team name this report covers, via the ".teamHeading" cell
+     *  that introduces this report's own shift tables — e.g.
+     *  <td class="teamHeading + border">BUFFALO SABRES</td>. NHL's legacy
+     *  markup uses space-separated class tokens like "teamHeading + border",
+     *  so .teamHeading matches it directly. This cell is deliberately NOT
+     *  the scoreboard-header "Game # Away/Home Game #" cells — those show
+     *  BOTH teams (once each), so picking from there is ambiguous about
+     *  which team this specific report actually covers. A TOI report only
+     *  ever covers one team (the file is per-team: a "TV" away report or
+     *  "TH" home report), so whatever we find here applies to every player. */
+    function parseNhlToiTeamName(doc) {
+        const heading = doc.querySelector('.teamHeading');
+        if (heading) {
+            const text = heading.textContent.replace(/\s+/g, ' ').trim();
+            if (text) return text;
+        }
+
+        // Fallback for report variants without a .teamHeading cell: look
+        // for "<name> Game # Away/Home Game #", handling <br> not adding
+        // whitespace to textContent.
+        const cells = Array.from(doc.querySelectorAll('td'))
+            .map(el => el.textContent.replace(/\s+/g, ' ').trim())
+            .filter(t => t !== '');
+        for (const text of cells) {
+            const m = text.match(/^(.+?)Game\s+\d+\s+(Away|Home)\s+Game\s+\d+$/i);
+            if (m) return m[1].trim();
+        }
+        return null;
+    }
+
+    /**
+     * Parse an NHL.com TOI report's HTML into per-player TOI data.
+     * Returns [{ jersey, name, team, periods: {1: secs, ...}, totalSecs, otSecs, regSecs }]
+     */
+    function parseNhlToiReport(htmlText) {
+        const doc  = new DOMParser().parseFromString(htmlText, 'text/html');
+        const team = parseNhlToiTeamName(doc);
+        const rows = Array.from(doc.querySelectorAll('tr'));
+
+        // "4 GOSTISBEHERE, SHAYNE" -> jersey 4, last GOSTISBEHERE, first SHAYNE
+        const headingRe = /^(\d{1,2})\s+([A-Z'.\-]+),\s*(.+)$/;
+
+        const players = [];
+        let current = null;
+
+        rows.forEach(row => {
+            const cols = Array.from(row.querySelectorAll('td, th'))
+                .map(c => c.textContent.replace(/\s+/g, ' ').trim())
+                .filter(c => c !== '');
+            if (cols.length === 0) return;
+
+            const rowText = cols.join(' ');
+            const headingMatch = rowText.match(headingRe);
+            if (headingMatch) {
+                const [, jersey, last, first] = headingMatch;
+                current = { jersey, name: `${first.trim()} ${last.trim()}`, team, periods: {}, totalSecs: null };
+                players.push(current);
+                return;
+            }
+
+            if (!current) return;
+            if (cols[0] === 'Per') return;      // header row of the summary table
+            if (cols.length < 4) return;
+
+            const toi = cols[3];
+            if (!/^\d{1,3}:\d{2}$/.test(toi)) return;
+            const secs = timeStrToSecs(toi);
+
+            if (cols[0] === 'TOT') {
+                current.totalSecs = secs;
+            } else if (/^\d+$/.test(cols[0])) {
+                current.periods[Number(cols[0])] = secs;
+            }
+        });
+
+        return players
+            .filter(p => p.totalSecs != null) // drop anything without a TOT row (no ice time recorded)
+            .map(p => {
+                const otSecs = Object.entries(p.periods)
+                    .filter(([per]) => Number(per) > 3)
+                    .reduce((sum, [, s]) => sum + s, 0);
+                return { ...p, otSecs, regSecs: p.totalSecs - otSecs };
+            });
+    }
+
+    function renderToiImportResults(players) {
+        if (players.length === 0) {
+            setToiImportMsg('No players found — is this a valid NHL.com TOI report page?', 'error');
+            toiImportResultsWrap.style.display = 'none';
+            return;
+        }
+
+        // If nobody logged OT time, this game ended in regulation — drop the
+        // OT/Regulation columns entirely rather than show a redundant "0:00"
+        // OT column and a Regulation column that's identical to Total.
+        const hasOT = players.some(p => p.otSecs > 0);
+
+        toiImportResultsHead.innerHTML = hasOT
+            ? '<tr><th>#</th><th>Team</th><th>Player</th><th>Total TOI</th><th>OT TOI</th><th>Regulation TOI</th></tr>'
+            : '<tr><th>#</th><th>Team</th><th>Player</th><th>Total TOI</th></tr>';
+
+        toiImportResultsBody.innerHTML = players.map(p => {
+            const teamCell  = `<td>${p.team || '—'}</td>`;
+            const totalCell = `<td>${formatToiCell(p.totalSecs)}</td>`;
+            if (!hasOT) {
+                return `<tr><td>${p.jersey}</td>${teamCell}<td>${p.name}</td>${totalCell}</tr>`;
+            }
+            const otCell  = `<td>${p.otSecs > 0 ? formatToiCell(p.otSecs) : '—'}</td>`;
+            const regCell = `<td>${formatToiCell(p.regSecs)}</td>`;
+            return `<tr><td>${p.jersey}</td>${teamCell}<td>${p.name}</td>${totalCell}${otCell}${regCell}</tr>`;
+        }).join('');
+
+        toiImportResultsWrap.style.display = 'block';
+        setToiImportMsg(
+            `Parsed ${players.length} player(s)${hasOT ? '' : ' — game ended in regulation, no OT.'}`,
+            'success'
+        );
+    }
+
+    function runToiImportParse(htmlText) {
+        try {
+            renderToiImportResults(parseNhlToiReport(htmlText));
+        } catch (err) {
+            setToiImportMsg('Failed to parse the report: ' + err.message, 'error');
+        }
+    }
+
+    toiImportLoadBtn.addEventListener('click', async () => {
+        const url = toiImportUrlInput.value.trim();
+        if (!url) { setToiImportMsg('Paste a report URL first.', 'error'); return; }
+
+        toiImportFallback.style.display = 'none';
+        toiImportResultsWrap.style.display = 'none';
+        setToiImportMsg('Fetching…', 'loading');
+
+        try {
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            runToiImportParse(await res.text());
+        } catch (err) {
+            setToiImportMsg(
+                "Fetch failed — likely blocked by CORS, since NHL.com's report pages don't appear to allow direct cross-origin requests. Use the fallback below instead.",
+                'error'
+            );
+            toiImportFallback.style.display = 'block';
+        }
+    });
+
+    toiImportParseBtn.addEventListener('click', () => {
+        if (!toiImportHtmlInput.value.trim()) { setToiImportMsg('Paste the page source first.', 'error'); return; }
+        runToiImportParse(toiImportHtmlInput.value);
+    });
+
+    toiImportClearBtn.addEventListener('click', () => {
+        toiImportUrlInput.value = '';
+        toiImportHtmlInput.value = '';
+        toiImportFallback.style.display = 'none';
+        toiImportResultsWrap.style.display = 'none';
+        setToiImportMsg('', '');
+    });
+
+
+    // ========================================================
     //  MMA — FIGHT TIME CALCULATOR
     // ========================================================
 

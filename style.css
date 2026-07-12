@@ -2,7 +2,11 @@
    GameTime Platform — Design Tokens & Styles
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Galada&display=swap');
+/* Font loading moved to a <link> tag in each page's <head> (with
+   preconnect hints) instead of this @import — @import is discovered only
+   after the browser downloads and parses this whole file, which delays
+   the font fetch and lengthens the fallback-font flash. See index.html /
+   gamebook-checker.html / toi-calc.html <head>. */
 
 /* ── Tokens ─────────────────────────────────────────────── */
 :root {
@@ -40,6 +44,29 @@
 
   /* Transitions */
   --transition: 140ms ease;
+  --transition-slow: 320ms cubic-bezier(.4,0,.2,1);
+  --ease-out: cubic-bezier(.16,1,.3,1);
+}
+
+/* ── Motion keyframes ───────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 /* ── Light theme overrides ───────────────────────────────── */
@@ -158,6 +185,7 @@ header {
 
 /* Theme toggle button */
 .theme-toggle {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -176,10 +204,17 @@ header {
   background: var(--purple-dim);
   border-color: var(--border-strong);
 }
-.theme-toggle .icon-moon  { display: block; }
-.theme-toggle .icon-sun   { display: none;  }
-[data-theme="light"] .theme-toggle .icon-moon { display: none;  }
-[data-theme="light"] .theme-toggle .icon-sun  { display: block; }
+.theme-toggle .icon-moon,
+.theme-toggle .icon-sun {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transition: opacity var(--transition-slow), transform var(--transition-slow);
+}
+.theme-toggle .icon-moon { opacity: 1; transform: translate(-50%,-50%) rotate(0deg); }
+.theme-toggle .icon-sun  { opacity: 0; transform: translate(-50%,-50%) rotate(-90deg) scale(.4); }
+[data-theme="light"] .theme-toggle .icon-moon { opacity: 0; transform: translate(-50%,-50%) rotate(90deg) scale(.4); }
+[data-theme="light"] .theme-toggle .icon-sun  { opacity: 1; transform: translate(-50%,-50%) rotate(0deg); }
 
 /* ── Page heading ───────────────────────────────────────── */
 main { padding: 2rem 1.5rem 5rem; }
@@ -215,11 +250,43 @@ main { padding: 2rem 1.5rem 5rem; }
   border-radius: var(--radius-lg);
   width: 340px;
   overflow: hidden;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), transform var(--transition-slow), box-shadow var(--transition-slow);
+  animation: cardEnter 480ms var(--ease-out) backwards;
 }
-.calc-card:hover { border-color: rgba(128,0,255,.25); }
+.calc-card:hover {
+  border-color: rgba(128,0,255,.25);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -12px rgba(0,0,0,.45);
+}
 
 .calc-card--wide { width: 480px; }
+
+/* Gentle stagger so cards don't all pop in at once */
+.sections-grid > .calc-card:nth-of-type(2),
+.fight-time-row .calc-card:nth-of-type(2) { animation-delay: 70ms; }
+.sections-grid > .calc-card:nth-of-type(3) { animation-delay: 140ms; }
+
+/* ── Row of cards that split width equally (used for MMA/Boxing under
+   the widened NHL TOI card) ────────────────────────────────────── */
+.fight-time-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 1060px;
+}
+.fight-time-row .calc-card {
+  flex: 1 1 300px;
+  width: auto;
+}
+
+/* ── NHL TOI Import — highlight the decimal value (the one PrizePicks
+   actually needs) ───────────────────────────────────────────────── */
+.toi-dec-highlight {
+  color: var(--green);
+  font-weight: 600;
+}
 
 /* Card header — clickable collapse toggle */
 .card-header {
@@ -254,12 +321,24 @@ main { padding: 2rem 1.5rem 5rem; }
 }
 .card-header.open .collapse-icon { transform: rotate(180deg); }
 
-/* Card body */
+/* Card body — smoothly collapses/expands instead of snapping via
+   display:none. max-height is a generous cap (not a measured value) so
+   the transition works without JS measuring scrollHeight; tall cards
+   just won't be clipped mid-transition since 2400px comfortably exceeds
+   every card's actual content height. */
 .card-body {
-  display: none;
+  display: block;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0 1.1rem;
+  transition: max-height var(--transition-slow), opacity 240ms ease, padding var(--transition-slow);
+}
+.card-body.open {
+  max-height: 2400px;
+  opacity: 1;
   padding: 1rem 1.1rem 1.25rem;
 }
-.card-body.open { display: block; }
 
 /* ── Info banner ────────────────────────────────────────── */
 .info-banner {
@@ -372,10 +451,23 @@ main { padding: 2rem 1.5rem 5rem; }
   margin-bottom: .6rem;
   color: var(--text-muted);
   transition: color var(--transition);
+  display: flex;
+  align-items: center;
+  gap: .4rem;
 }
 .fetch-msg--loading { color: var(--purple-light); }
-.fetch-msg--success { color: var(--green); }
-.fetch-msg--error   { color: #ff6b6b; }
+.fetch-msg--loading::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--purple-dim);
+  border-top-color: var(--purple-light);
+  animation: spin 700ms linear infinite;
+  flex-shrink: 0;
+}
+.fetch-msg--success { color: var(--green); animation: fadeInUp 250ms var(--ease-out); }
+.fetch-msg--error   { color: #ff6b6b; animation: fadeInUp 250ms var(--ease-out); }
 
 /* ── Player name input ───────────────────────────────────── */
 .player-name-input {
@@ -484,6 +576,7 @@ main { padding: 2rem 1.5rem 5rem; }
   padding: .42rem .9rem;
   transition: all var(--transition);
 }
+.btn:hover  { transform: translateY(-1px); }
 .btn:active { transform: translateY(1px); }
 
 .btn-full {
@@ -513,7 +606,10 @@ kbd {
   background: var(--purple);
   color: #fff;
 }
-.btn-primary:hover { background: var(--purple-light); }
+.btn-primary:hover {
+  background: var(--purple-light);
+  box-shadow: 0 6px 16px -4px rgba(128,0,255,.5);
+}
 
 .btn-secondary {
   background: transparent;
@@ -570,6 +666,7 @@ kbd {
   gap: .65rem;
   margin-top: .6rem;
   flex-wrap: wrap;
+  animation: fadeInUp 300ms var(--ease-out);
 }
 .breakdown-actions.visible { display: flex; }
 
@@ -763,6 +860,7 @@ a.popover-btn { padding: 0 0 0 6px; }
   padding: 1px 5px;
   margin-left: .4rem;
   vertical-align: middle;
+  animation: popIn 220ms var(--ease-out);
 }
 
 .manual-bolt {
@@ -819,6 +917,7 @@ a.popover-btn { padding: 0 0 0 6px; }
   margin-top: 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  animation: fadeInUp 360ms var(--ease-out);
 }
 .gamebook-table {
   width: 100%;
@@ -831,6 +930,7 @@ a.popover-btn { padding: 0 0 0 6px; }
   padding: .5rem .65rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
 }
 .gamebook-table th {
   color: var(--text-muted);
@@ -847,6 +947,23 @@ a.popover-btn { padding: 0 0 0 6px; }
 .gamebook-table tr:hover td {
   background: var(--bg-card-hover);
 }
+/* Staggered row entrance whenever a results table is (re)populated —
+   innerHTML replacement creates fresh DOM nodes each time, so this
+   replays automatically on every new search/parse, no JS needed. */
+.gamebook-table tbody tr {
+  animation: fadeInUp 280ms var(--ease-out) backwards;
+}
+.gamebook-table tbody tr:nth-child(1)  { animation-delay: 0ms;   }
+.gamebook-table tbody tr:nth-child(2)  { animation-delay: 20ms;  }
+.gamebook-table tbody tr:nth-child(3)  { animation-delay: 40ms;  }
+.gamebook-table tbody tr:nth-child(4)  { animation-delay: 60ms;  }
+.gamebook-table tbody tr:nth-child(5)  { animation-delay: 80ms;  }
+.gamebook-table tbody tr:nth-child(6)  { animation-delay: 100ms; }
+.gamebook-table tbody tr:nth-child(7)  { animation-delay: 120ms; }
+.gamebook-table tbody tr:nth-child(8)  { animation-delay: 140ms; }
+.gamebook-table tbody tr:nth-child(9)  { animation-delay: 160ms; }
+.gamebook-table tbody tr:nth-child(10) { animation-delay: 180ms; }
+.gamebook-table tbody tr:nth-child(n+11) { animation-delay: 200ms; }
 .gamebook-dnp-cell {
   color: var(--text-muted);
   font-style: italic;
@@ -854,8 +971,8 @@ a.popover-btn { padding: 0 0 0 6px; }
 
 /* ── Gamebook Checker — Flag badges (reuses .manual-badge base) ── */
 .gamebook-flag-dnp {
-  color: var(--green);
-  border-color: var(--green);
+  color: var(--text-muted);
+  border-color: var(--border-input);
 }
 .gamebook-flag-reboot {
   color: var(--yellow);
@@ -875,4 +992,14 @@ a.popover-btn { padding: 0 0 0 6px; }
 .gamebook-table td.gamebook-col-highlight {
   background: var(--purple-dim);
   font-weight: 500;
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

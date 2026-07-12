@@ -56,7 +56,11 @@ window.onload = function () {
     }
     function toggleSection(contentSelector) {
         const el = document.querySelector(contentSelector);
-        el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        const header = el.previousElementSibling; // .card-header sits right before .card-body
+        el.classList.toggle('open');
+        if (header && header.classList.contains('card-header')) {
+            header.classList.toggle('open');
+        }
     }
     /** Copy a textarea's contents to the clipboard and trigger the toast. */
     function copyBreakdown(textareaSelector) {
@@ -786,7 +790,7 @@ window.onload = function () {
 
         async function fetchBoxscore(gamePk) {
             if (boxscoreCache[gamePk]) return boxscoreCache[gamePk];
-            const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`, { cache: 'no-store' } );
+            const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`);
             if (!res.ok) throw new Error('boxscore request failed');
             const data = await res.json();
             boxscoreCache[gamePk] = data.teams || {};
