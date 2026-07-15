@@ -112,52 +112,83 @@ window.onload = function () {
     // ========================================================
     //  BASKETBALL (NBA / WNBA / CBB)
     // ========================================================
-    const bballTotalEl     = document.querySelector('#bball-total-fs');
-    const bballGoBtn       = document.querySelector('#bball-btn');
-    const bballClearBtn    = document.querySelector('#bball-clear');
-    const bballCopyBtn     = document.querySelector('#bball-copy');
-    const bballHeaderEl    = document.querySelector('#head-bball');
-    let   bballHzsChk      = document.querySelector('#bball-hzs-checkbox');
-    const bballInputs = document.querySelectorAll('.bball-fs');
-    const bballVals   = document.querySelectorAll('.bball-val');
+    //
+    // Player Search, Name Search, and Manual are fully independent modes —
+    // each has its own name field (or tracked name, for Player Search),
+    // stat-table, total, Go/Clear, fetch-msg/matchup, and breakdown. They
+    // used to share one set of elements, which meant switching modes could
+    // show a previous mode's leftover fetch result. computeBballFS() below
+    // is the one shared piece — just the math/breakdown-building logic,
+    // parameterized by which mode's elements to read from and write to —
+    // so the formula itself can't drift between modes even though their
+    // DOM/state is fully separate.
+    const bballHeaderEl = document.querySelector('#head-bball');
+    bballHeaderEl.addEventListener('click', () => toggleSection('#content-bball'));
+
+    /** Compute FS from one mode's stat inputs and render its breakdown. Returns the (possibly new) hide-zeros checkbox reference for that mode. */
+    function computeBballFS(ids) {
+        const ptsVal  = Number(ids.pts.value);
+        const rebsVal = Number((Number(ids.rebs.value) * 1.2).toFixed(1));
+        const astVal  = Number((Number(ids.asst.value)  * 1.5).toFixed(1));
+        const blkVal  = Number(ids.blk.value) * 3;
+        const stlVal  = Number(ids.stl.value) * 3;
+        const toVal   = Number(ids.to.value)  * -1;
+        const total = Number((ptsVal + rebsVal + astVal + blkVal + stlVal + toVal).toFixed(1));
+
+        ids.pointsVal.innerHTML    = `= ${ptsVal}`;
+        ids.reboundsVal.innerHTML  = `= ${rebsVal}`;
+        ids.assistsVal.innerHTML   = `= ${astVal}`;
+        ids.blocksVal.innerHTML    = `= ${blkVal}`;
+        ids.stealsVal.innerHTML    = `= ${stlVal}`;
+        ids.turnoversVal.innerHTML = `= ${toVal}`;
+        ids.totalEl.innerHTML = total;
+        fillEmptyInputs(ids.inputs);
+
+        const statLines = [
+            `Points: 1 pt (${ids.pts.value}) = ${ptsVal}`,
+            `Rebound: 1.2 pts (${ids.rebs.value}) = ${rebsVal}`,
+            `Assist: 1.5 pts (${ids.asst.value}) = ${astVal}`,
+            `Block: 3 pts (${ids.blk.value}) = ${blkVal}`,
+            `Steal: 3 pts (${ids.stl.value}) = ${stlVal}`,
+            `Turnover: -1 pt (${ids.to.value}) = ${toVal}`,
+        ];
+        const header = buildHeader(ids.playerName(), undefined);
+        const breakdownText = withHeader(header, buildBreakdown(statLines, total));
+        showBreakdown(ids.breakdownSel, ids.textareaBtnContSel, breakdownText);
+        document.getElementById(ids.breakdownWrapId).style.display = 'block';
+        return setupHideZerosCheckbox(ids.hzsChk, ids.breakdownSel, statLines, ids.inputs, total, '', header);
+    }
+
+    // ── Manual mode (keeps the original bball-* IDs — it's the "base" set) ──
+    const bballTotalEl  = document.querySelector('#bball-total-fs');
+    const bballGoBtn    = document.querySelector('#bball-btn');
+    const bballClearBtn = document.querySelector('#bball-clear');
+    const bballCopyBtn  = document.querySelector('#bball-copy');
+    const bballInputs   = document.querySelectorAll('.bball-fs');
+    const bballVals     = document.querySelectorAll('#bball-manual-mode .bball-val');
     const bballPts  = document.getElementById('bball-pts');
     const bballRebs = document.getElementById('bball-rebs');
     const bballAst  = document.getElementById('bball-asst');
     const bballBlk  = document.getElementById('bball-blk');
     const bballStl  = document.getElementById('bball-stl');
     const bballTo   = document.getElementById('bball-to');
+    let   bballHzsChk = document.querySelector('#bball-hzs-checkbox');
+    const bballManualIds = {
+        pts: bballPts, rebs: bballRebs, asst: bballAst, blk: bballBlk, stl: bballStl, to: bballTo,
+        pointsVal: document.querySelector('#bball-points-val'),
+        reboundsVal: document.querySelector('#bball-rebounds-val'),
+        assistsVal: document.querySelector('#bball-assists-val'),
+        blocksVal: document.querySelector('#bball-blocks-val'),
+        stealsVal: document.querySelector('#bball-steals-val'),
+        turnoversVal: document.querySelector('#bball-turnovers-val'),
+        totalEl: bballTotalEl, inputs: bballInputs,
+        playerName: () => document.getElementById('bball-player-name').value,
+        breakdownSel: '#bball-breakdown', textareaBtnContSel: '#bball-textarea-btn-cont',
+        breakdownWrapId: 'bball-breakdown-wrap', hzsChk: bballHzsChk,
+    };
     bballGoBtn.addEventListener('click', () => {
-        const ptsVal  = Number(bballPts.value);
-        const rebsVal = Number((Number(bballRebs.value) * 1.2).toFixed(1));
-        const astVal  = Number((Number(bballAst.value)  * 1.5).toFixed(1));
-        const blkVal  = Number(bballBlk.value) * 3;
-        const stlVal  = Number(bballStl.value) * 3;
-        const toVal   = Number(bballTo.value)  * -1;
-        const total = Number((ptsVal + rebsVal + astVal + blkVal + stlVal + toVal).toFixed(1));
-        // Update inline value displays
-        document.querySelector('#bball-points-val').innerHTML   = `= ${ptsVal}`;
-        document.querySelector('#bball-rebounds-val').innerHTML = `= ${rebsVal}`;
-        document.querySelector('#bball-assists-val').innerHTML  = `= ${astVal}`;
-        document.querySelector('#bball-blocks-val').innerHTML   = `= ${blkVal}`;
-        document.querySelector('#bball-steals-val').innerHTML   = `= ${stlVal}`;
-        document.querySelector('#bball-turnovers-val').innerHTML= `= ${toVal}`;
-        bballTotalEl.innerHTML = total;
-        fillEmptyInputs(bballInputs);
-        const statLines = [
-            `Points: 1 pt (${bballPts.value}) = ${ptsVal}`,
-            `Rebound: 1.2 pts (${bballRebs.value}) = ${rebsVal}`,
-            `Assist: 1.5 pts (${bballAst.value}) = ${astVal}`,
-            `Block: 3 pts (${bballBlk.value}) = ${blkVal}`,
-            `Steal: 3 pts (${bballStl.value}) = ${stlVal}`,
-            `Turnover: -1 pt (${bballTo.value}) = ${toVal}`,
-        ];
-        const bballHeader = buildHeader(
-            document.getElementById('bball-player-name').value,
-            document.querySelector('input[name="bball-period"]:checked')?.value
-        );
-        const bballBreakdown = withHeader(bballHeader, buildBreakdown(statLines, total));
-        showBreakdown('#bball-breakdown', '#bball-textarea-btn-cont', bballBreakdown);
-        bballHzsChk = setupHideZerosCheckbox(bballHzsChk, '#bball-breakdown', statLines, bballInputs, total, '', bballHeader);
+        bballManualIds.hzsChk = bballHzsChk;
+        bballHzsChk = computeBballFS(bballManualIds);
     });
     bballClearBtn.addEventListener('click', () => {
         bballInputs.forEach(i => i.value = '');
@@ -166,29 +197,466 @@ window.onload = function () {
         bballTotalEl.innerHTML = '';
         document.querySelector('#bball-breakdown').innerHTML = '';
         document.querySelector('#bball-textarea-btn-cont').style.display = 'none';
-        document.getElementById('bball-matchup').textContent = '';
-        document.getElementById('bball-fetch-msg').textContent = '';
-        bballGameSelect.innerHTML = '';
-        bballTeamSelect.innerHTML = '';
-        bballPlayerSelect.innerHTML = '';
-        bballGameRow.style.display = 'none';
-        bballTeamRow.style.display = 'none';
-        bballPlayerRow.style.display = 'none';
+        document.getElementById('bball-breakdown-wrap').style.display = 'none';
     });
-    bballCopyBtn.addEventListener('click',   () => copyBreakdown('#bball-breakdown'));
-    bballHeaderEl.addEventListener('click',  () => toggleSection('#content-bball'));
-    // ── Basketball — Auto-fill from ESPN (NBA) ────────────────────
+    bballCopyBtn.addEventListener('click', () => copyBreakdown('#bball-breakdown'));
+
+    // ── Basketball — Mode toggle (Gamebook / Player Search / Name Search / Manual) ──
+    // Each mode is now fully self-contained, so this only needs to show/hide
+    // the 4 panels (plus the shared date row) — no more shared-footer state.
+    document.querySelectorAll('.bball-mode-radio').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const isGamebook = document.getElementById('bball-mode-gamebook').checked;
+            const isSearch   = document.getElementById('bball-mode-search').checked;
+            const isName     = document.getElementById('bball-mode-name').checked;
+            const isManual   = !isGamebook && !isSearch && !isName;
+
+            document.getElementById('bball-gamebook-mode').style.display = isGamebook ? 'block' : 'none';
+            document.getElementById('bball-search-mode').style.display   = isSearch   ? 'block' : 'none';
+            document.getElementById('bball-name-mode').style.display     = isName     ? 'block' : 'none';
+            document.getElementById('bball-manual-mode').style.display   = isManual   ? 'block' : 'none';
+            document.getElementById('bball-date-row').style.display      = (isSearch || isName) ? 'block' : 'none';
+        });
+    });
+
+    // ============================================================
+    //  Basketball — Upload Gamebook mode
+    //
+    //  Parses the NBA.com/WNBA.com official Game Book PDF the same way
+    //  the Gamebook Checker does (gamebook-checker.js) — pdf.js only
+    //  gives raw positioned text fragments, so rows are reconstructed by
+    //  clustering fragments by y-coordinate and sorting by x-coordinate
+    //  within each cluster. That part is identical to the Gamebook
+    //  Checker; what's new here is pulling the FULL stat line per
+    //  player per section (not just MIN) and computing fantasy score
+    //  per period using the existing formula (Pts x1, Reb x1.2, Ast
+    //  x1.5, Blk x3, Stl x3, TO x-1).
+    //
+    //  Categories shown: Full Game (FINAL BOX, already includes OT),
+    //  1H, 1Q, 2H, OT, 2H+OT, 4Q, 4Q+OT. The OT/2H+OT/4Q+OT columns are
+    //  only shown if the game actually went to overtime.
+    // ============================================================
+    const BBALL_GB_SECTION_TITLES = [
+        'FINAL BOX', '1st QUARTER ONLY', '2nd QUARTER ONLY', 'FIRST HALF',
+        '3rd QUARTER ONLY', '1st QUARTER - 3rd QUARTER', '4th QUARTER ONLY',
+        '1st QUARTER - 4th QUARTER', 'SECOND HALF',
+    ];
+    const BBALL_GB_OT_PATTERN = /^(\d+)(?:st|nd|rd|th) OT ONLY$/;
+    // Fixed column order after the MIN token in every player row.
+    const BBALL_GB_STAT_KEYS = ['fg', 'fga', 'fg3', 'fg3a', 'ft', 'fta', 'or', 'dr', 'tot', 'ast', 'pf', 'stl', 'to', 'blk', 'plusMinus', 'pts'];
+
+    /** Cluster pdf.js text items into visually-ordered rows (top-to-bottom, left-to-right). */
+    function bballGbReconstructRows(items, yTolerance = 2.5) {
+        const rows = [];
+        items.forEach(item => {
+            const y = item.transform[5];
+            let row = rows.find(r => Math.abs(r.y - y) <= yTolerance);
+            if (!row) { row = { y, items: [] }; rows.push(row); }
+            row.items.push(item);
+        });
+        rows.sort((a, b) => b.y - a.y);
+        rows.forEach(r => r.items.sort((a, b) => a.transform[4] - b.transform[4]));
+        return rows
+            .map(r => r.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+    }
+    async function bballGbExtractPageLines(page) {
+        const content = await page.getTextContent();
+        return bballGbReconstructRows(content.items);
+    }
+    /** Identify which known section a page belongs to. Returns null for non-box-score pages (play-by-play, etc). */
+    function bballGbDetectSectionTitle(lines) {
+        if (!lines.some(l => l.includes("OFFICIAL SCORER'S"))) return null;
+        const titleLines = lines.slice(0, 6);
+        const joined = titleLines.join(' | ');
+        const fixed = BBALL_GB_SECTION_TITLES.find(title => joined.includes(title));
+        if (fixed) return fixed;
+        const ot = titleLines.find(l => BBALL_GB_OT_PATTERN.test(l.trim()));
+        return ot ? ot.trim() : null;
+    }
+    /** Parse a single active-player row into jersey/name/stats, or a warning if the column count doesn't match. */
+    function bballGbParsePlayerRow(line) {
+        const tokens = line.split(' ');
+        if (tokens.length < 3) return null;
+        const jersey = tokens[0];
+        if (!/^\d{1,2}$/.test(jersey)) return null;
+
+        const minIdx = tokens.findIndex(t => /^\d{1,2}:\d{2}$/.test(t));
+        if (minIdx < 2) return null;
+
+        let nameEnd = minIdx;
+        const maybePos = tokens[minIdx - 1];
+        if (['F', 'C', 'G'].includes(maybePos) && minIdx - 1 > 1) nameEnd = minIdx - 1;
+        const name = tokens.slice(1, nameEnd).join(' ');
+
+        const statTokens = tokens.slice(minIdx + 1);
+        if (statTokens.length !== BBALL_GB_STAT_KEYS.length) {
+            return { jersey, name, stats: null, parseWarning: `Expected ${BBALL_GB_STAT_KEYS.length} stat columns, found ${statTokens.length}` };
+        }
+        const stats = {};
+        BBALL_GB_STAT_KEYS.forEach((key, i) => { stats[key] = Number(statTokens[i]); });
+        return { jersey, name, stats, parseWarning: null };
+    }
+    /** Parse a "DNP - <reason>" row. */
+    function bballGbParseDnpRow(line) {
+        const m = line.match(/^(\d{1,2})\s+(.+?)\s+DNP\s*-\s*(.+)$/);
+        return m ? { jersey: m[1], name: m[2].trim() } : null;
+    }
+    /** Parse one section page's lines into { teamName: { players: [...] } }. */
+    function bballGbParseSectionPage(lines) {
+        const teams = {};
+        let currentTeam = null;
+        for (const line of lines) {
+            const visitorMatch = line.match(/^VISITOR:\s*(.+?)(?:\s*\(\d+-\d+\))?$/);
+            const homeMatch = line.match(/^HOME:\s*(.+?)(?:\s*\(\d+-\d+\))?$/);
+            if (visitorMatch) { currentTeam = visitorMatch[1].trim(); teams[currentTeam] = { players: [] }; continue; }
+            if (homeMatch)    { currentTeam = homeMatch[1].trim();    teams[currentTeam] = { players: [] }; continue; }
+            if (!currentTeam) continue;
+            if (/^\d{2,3}:00\s/.test(line)) { currentTeam = null; continue; } // team totals row
+            if (line.startsWith('POS ')) continue; // header row
+
+            const dnp = bballGbParseDnpRow(line);
+            if (dnp) { teams[currentTeam].players.push({ jersey: dnp.jersey, name: dnp.name, dnp: true }); continue; }
+            const active = bballGbParsePlayerRow(line);
+            if (active) teams[currentTeam].players.push({ jersey: active.jersey, name: active.name, dnp: false, stats: active.stats, parseWarning: active.parseWarning });
+        }
+        return teams;
+    }
+    /** Fantasy score from a raw stat object using the existing Basketball FS formula. */
+    function bballGbFsFromStats(stats) {
+        if (!stats) return null;
+        return Number((stats.pts * 1 + stats.tot * 1.2 + stats.ast * 1.5 + stats.blk * 3 + stats.stl * 3 + stats.to * -1).toFixed(1));
+    }
+    /** Sum raw stats across multiple period sections (used for 2H+OT / 4Q+OT combos). */
+    function bballGbSumStats(statsList) {
+        const valid = statsList.filter(Boolean);
+        if (valid.length === 0) return null;
+        const sum = {};
+        ['pts', 'tot', 'ast', 'blk', 'stl', 'to'].forEach(k => { sum[k] = valid.reduce((acc, s) => acc + (s[k] || 0), 0); });
+        return sum;
+    }
+    /** Build one row per player with FS for every required category. */
+    function bballGbBuildTable(sections) {
+        const master = {};
+        Object.keys(sections).forEach(title => {
+            Object.entries(sections[title]).forEach(([team, teamData]) => {
+                teamData.players.forEach(p => {
+                    const key = `${team}__${p.jersey}`;
+                    if (!master[key]) master[key] = { team, jersey: p.jersey, name: p.name, fullGameDnp: false, raw: {}, warnings: [] };
+                    if (p.dnp) {
+                        if (title === 'FINAL BOX') master[key].fullGameDnp = true;
+                        master[key].raw[title] = null;
+                    } else {
+                        master[key].raw[title] = p.stats;
+                        if (p.parseWarning) master[key].warnings.push(`${title}: ${p.parseWarning}`);
+                    }
+                });
+            });
+        });
+
+        const otTitles = Object.keys(sections).filter(t => BBALL_GB_OT_PATTERN.test(t));
+        const rows = Object.values(master).map(r => {
+            const otStatsList = otTitles.map(t => r.raw[t]).filter(Boolean);
+            const otCombined = otTitles.length > 0 ? bballGbSumStats(otStatsList) : null;
+            const secondHalfRaw = r.raw['SECOND HALF'] || null;
+            const fourthQRaw = r.raw['4th QUARTER ONLY'] || null;
+
+            // Raw stats per category, keyed the same way as the display
+            // columns — kept alongside the FS number so a clicked cell can
+            // show the full stat-line breakdown, not just the total.
+            const statsByCategory = {
+                'Full Game': r.raw['FINAL BOX'],
+                '1H':        r.raw['FIRST HALF'],
+                '1Q':        r.raw['1st QUARTER ONLY'],
+                '2H':        secondHalfRaw,
+                'OT':        otCombined,
+                '2H+OT':     (secondHalfRaw || otCombined) ? bballGbSumStats([secondHalfRaw, otCombined]) : null,
+                '4Q':        fourthQRaw,
+                '4Q+OT':     (fourthQRaw || otCombined) ? bballGbSumStats([fourthQRaw, otCombined]) : null,
+            };
+            const fs = {};
+            Object.keys(statsByCategory).forEach(cat => { fs[cat] = bballGbFsFromStats(statsByCategory[cat]); });
+
+            return {
+                team: r.team, jersey: r.jersey, name: r.name,
+                fullGameDnp: r.fullGameDnp, warnings: r.warnings,
+                statsByCategory, fs,
+            };
+        });
+        rows.sort((a, b) => a.team.localeCompare(b.team) || Number(a.jersey) - Number(b.jersey));
+        return { rows, hasOT: otTitles.length > 0 };
+    }
+    /** Top-level: parse an uploaded Game Book PDF (ArrayBuffer) into the per-player FS table. */
+    async function bballGbParsePdf(arrayBuffer) {
+        const doc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const sections = {};
+        for (let i = 1; i <= doc.numPages; i++) {
+            const page = await doc.getPage(i);
+            const lines = await bballGbExtractPageLines(page);
+            const title = bballGbDetectSectionTitle(lines);
+            if (!title || sections[title]) continue; // skip PBP pages / unexpected duplicates
+            sections[title] = bballGbParseSectionPage(lines);
+        }
+        const foundSections = Object.keys(sections);
+        if (foundSections.length === 0) {
+            throw new Error("No recognizable Official Scorer's Report sections found — is this an NBA.com/WNBA.com Game Book PDF?");
+        }
+        const { rows, hasOT } = bballGbBuildTable(sections);
+        return { rows, hasOT, foundSections };
+    }
+
+    // --- Basketball Gamebook — UI wiring ---
+    const bballGbFileInput      = document.querySelector('#bball-gb-file-input');
+    const bballGbDropZone       = document.querySelector('#bball-gb-dropzone');
+    const bballGbStatus         = document.querySelector('#bball-gb-status');
+    const bballGbMissing        = document.querySelector('#bball-gb-missing');
+    const bballGbTeamTabs       = document.querySelector('#bball-gb-team-tabs');
+    const bballGbResultsWrap    = document.querySelector('#bball-gb-results-wrap');
+    const bballGbResultsHead    = document.querySelector('#bball-gb-results-head');
+    const bballGbResultsBody    = document.querySelector('#bball-gb-results-body');
+    const bballGbBreakdownLabel = document.querySelector('#bball-gb-breakdown-label');
+    const bballGbBreakdownArea  = document.querySelector('#bball-gb-breakdown-area');
+    const bballGbBreakdownEl    = document.querySelector('#bball-gb-breakdown');
+    const bballGbBreakdownCopy  = document.querySelector('#bball-gb-breakdown-copy');
+
+    const BBALL_GB_REQUIRED_SECTIONS = ['FINAL BOX', 'FIRST HALF', 'SECOND HALF', '1st QUARTER ONLY', '4th QUARTER ONLY'];
+    // The 5 categories Alex actually wants tracked, per his rule that Full
+    // Game/2H/4Q include OT — so the "real" 2H/4Q here are the +OT columns.
+    const BBALL_GB_HIGHLIGHTED = new Set(['Full Game', '1H', '1Q', '2H+OT', '4Q+OT']);
+
+    let bballGbLastRows   = []; // current parse results (all players, incl. full-game DNPs), kept for cell-click lookup
+    let bballGbHasOT      = false;
+    let bballGbActiveTeam = null;
+
+
+    function bballGbSetStatus(msg, type = '') {
+        bballGbStatus.textContent = msg;
+        bballGbStatus.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    /** Same per-stat breakdown lines/formula as the manual Go button, built from a raw stat object. */
+    function bballGbBreakdownLines(stats) {
+        const ptsVal  = stats.pts;
+        const rebsVal = Number((stats.tot * 1.2).toFixed(1));
+        const astVal  = Number((stats.ast * 1.5).toFixed(1));
+        const blkVal  = stats.blk * 3;
+        const stlVal  = stats.stl * 3;
+        const toVal   = stats.to * -1;
+        return [
+            `Points: 1 pt (${stats.pts}) = ${ptsVal}`,
+            `Rebound: 1.2 pts (${stats.tot}) = ${rebsVal}`,
+            `Assist: 1.5 pts (${stats.ast}) = ${astVal}`,
+            `Block: 3 pts (${stats.blk}) = ${blkVal}`,
+            `Steal: 3 pts (${stats.stl}) = ${stlVal}`,
+            `Turnover: -1 pt (${stats.to}) = ${toVal}`,
+        ];
+    }
+
+    /** Show the full stat-line breakdown for one player/category cell, copy-paste ready. */
+    function bballGbShowBreakdown(row, category) {
+        const stats = row.statsByCategory[category];
+        const fs = row.fs[category];
+        if (!stats || fs === null) return; // DNP or no data for this category — nothing to break down
+
+        const header = `${row.name} - ${category} FS`;
+        const text = `${header}\n${bballGbBreakdownLines(stats).join('\n')}\n\nTOTAL FS = ${fs}`;
+        bballGbBreakdownEl.value = text;
+        bballGbBreakdownLabel.style.display = 'block';
+        bballGbBreakdownArea.style.display = 'block';
+    }
+
+    function bballGbFmtCell(row, key) {
+        const val = row.fs[key];
+        if (val === null) return '<span class="gamebook-dnp-cell">DNP</span>'; // DNP for that specific period only
+        const key_ = `${row.team}__${row.jersey}`;
+        return `<span class="gamebook-cell-clickable" data-key="${key_}" data-cat="${key}">${val}</span>`;
+    }
+
+    /** Build the team-tab pills from all parsed rows, and wire them to re-render on click. No re-parse needed — just filters bballGbLastRows. */
+    function bballGbRenderTeamTabs(rows) {
+        const teams = [...new Set(rows.map(r => r.team))];
+        bballGbTeamTabs.innerHTML = teams.map(t =>
+            `<label class="round-pill" style="width:${Math.floor(100 / teams.length) - 1}%">
+                <input type="radio" name="bball-gb-team-tab" value="${t}" ${t === bballGbActiveTeam ? 'checked' : ''}> ${t}
+             </label>`
+        ).join('');
+        bballGbTeamTabs.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                bballGbActiveTeam = radio.value;
+                bballGbBreakdownLabel.style.display = 'none';
+                bballGbBreakdownArea.style.display = 'none';
+                bballGbRenderResults(bballGbLastRows, bballGbHasOT, bballGbActiveTeam);
+            });
+        });
+        bballGbTeamTabs.style.display = teams.length > 0 ? 'flex' : 'none';
+    }
+
+    function bballGbRenderResults(allRows, hasOT, activeTeam) {
+        const rows = allRows.filter(r => !r.fullGameDnp && r.team === activeTeam);
+        const cols = hasOT
+            ? ['Full Game', '1H', '1Q', '2H', 'OT', '2H+OT', '4Q', '4Q+OT']
+            : ['Full Game', '1H', '1Q', '2H', '4Q'];
+
+        bballGbResultsHead.innerHTML = '<tr><th>#</th><th>Player</th>' +
+            cols.map(c => `<th class="${BBALL_GB_HIGHLIGHTED.has(c) ? 'gamebook-col-highlight' : ''}">${c}</th>`).join('') +
+            '<th>Flags</th></tr>';
+
+        bballGbResultsBody.innerHTML = rows.map(r => {
+            const cells = cols.map(c =>
+                `<td class="${BBALL_GB_HIGHLIGHTED.has(c) ? 'gamebook-col-highlight' : ''}">${bballGbFmtCell(r, c)}</td>`
+            ).join('');
+            const flags = [];
+            if (r.warnings.length) flags.push(`<span class="manual-badge gamebook-flag-warn" title="${r.warnings.join('; ')}">⚠ Check</span>`);
+            return `<tr><td>#${r.jersey}</td><td>${r.name}</td>${cells}<td>${flags.join(' ') || '—'}</td></tr>`;
+        }).join('');
+    }
+
+    // Event delegation — table body is fully replaced on every parse, so
+    // listeners are bound once on the (stable) parent rather than per-cell.
+    bballGbResultsBody.addEventListener('click', e => {
+        const cell = e.target.closest('.gamebook-cell-clickable');
+        if (!cell) return;
+        const row = bballGbLastRows.find(r => `${r.team}__${r.jersey}` === cell.dataset.key);
+        if (!row) return;
+
+        document.querySelectorAll('.gamebook-cell-active').forEach(el => el.classList.remove('gamebook-cell-active'));
+        cell.classList.add('gamebook-cell-active');
+        bballGbShowBreakdown(row, cell.dataset.cat);
+    });
+
+    bballGbBreakdownCopy.addEventListener('click', () => {
+        bballGbBreakdownEl.select();
+        bballGbBreakdownEl.setSelectionRange(0, 99999);
+        triggerToastBtn.click();
+        navigator.clipboard.writeText(bballGbBreakdownEl.value);
+    });
+
+    async function bballGbHandleFile(file) {
+        if (!file || file.type !== 'application/pdf') {
+            bballGbSetStatus('Please upload a PDF file.', 'error');
+            return;
+        }
+        bballGbResultsWrap.style.display = 'none';
+        bballGbResultsBody.innerHTML = '';
+        bballGbResultsHead.innerHTML = '';
+        bballGbMissing.textContent = '';
+        bballGbBreakdownLabel.style.display = 'none';
+        bballGbBreakdownArea.style.display = 'none';
+        bballGbSetStatus(`Reading ${file.name}…`, 'loading');
+
+        try {
+            const buffer = await file.arrayBuffer();
+            const { rows, hasOT, foundSections } = await bballGbParsePdf(buffer);
+            bballGbLastRows = rows;
+            bballGbHasOT = hasOT;
+
+            const missing = BBALL_GB_REQUIRED_SECTIONS.filter(t => !foundSections.includes(t));
+            if (missing.length > 0) {
+                bballGbMissing.textContent = `Note: could not find these sections in the PDF — ${missing.join(', ')}. Related columns may be incomplete.`;
+            }
+
+            const teams = [...new Set(rows.map(r => r.team))];
+            bballGbActiveTeam = teams[0] || null;
+            bballGbRenderTeamTabs(rows);
+            bballGbRenderResults(rows, hasOT, bballGbActiveTeam);
+
+            const dnpCount = rows.filter(r => r.fullGameDnp).length;
+            const shown = rows.length - dnpCount;
+            bballGbSetStatus(
+                `Parsed ${shown} player(s)${dnpCount ? ` (${dnpCount} full-game DNP hidden)` : ''} from ${foundSections.length} sections${hasOT ? ' (game went to OT)' : ''}. Click any value for its breakdown.`,
+                'success'
+            );
+            bballGbResultsWrap.style.display = 'block';
+        } catch (err) {
+            bballGbSetStatus('Could not parse this PDF — ' + err.message, 'error');
+        }
+    }
+
+    bballGbFileInput.addEventListener('change', () => bballGbHandleFile(bballGbFileInput.files[0]));
+    ['dragenter', 'dragover'].forEach(evt =>
+        bballGbDropZone.addEventListener(evt, e => { e.preventDefault(); bballGbDropZone.classList.add('gamebook-dropzone--active'); })
+    );
+    ['dragleave', 'drop'].forEach(evt =>
+        bballGbDropZone.addEventListener(evt, e => { e.preventDefault(); bballGbDropZone.classList.remove('gamebook-dropzone--active'); })
+    );
+    bballGbDropZone.addEventListener('drop', e => {
+        const file = e.dataTransfer.files[0];
+        if (file) bballGbHandleFile(file);
+    });
+    bballGbDropZone.addEventListener('click', () => bballGbFileInput.click());
+
+    document.querySelector('#bball-gb-clear').addEventListener('click', () => {
+        bballGbFileInput.value = '';
+        bballGbResultsWrap.style.display = 'none';
+        bballGbResultsBody.innerHTML = '';
+        bballGbResultsHead.innerHTML = '';
+        bballGbMissing.textContent = '';
+        bballGbTeamTabs.innerHTML = '';
+        bballGbTeamTabs.style.display = 'none';
+        bballGbBreakdownLabel.style.display = 'none';
+        bballGbBreakdownArea.style.display = 'none';
+        bballGbLastRows = [];
+        bballGbHasOT = false;
+        bballGbActiveTeam = null;
+        bballGbSetStatus('', '');
+    });
+
+    // ── Basketball — Auto-fill from ESPN (NBA) — Name Search mode ─
     // Data source: ESPN's public site API (undocumented, no auth).
     // Flow: name → athlete ID (search) → season game log → match date → fields.
     const ESPN_SEARCH_API = 'https://site.api.espn.com/apis/search/v2';
     const ESPN_NBA_API    = 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba';
-    const bballFetchBtn  = document.querySelector('#bball-fetch-btn');
-    const bballDateInput = document.querySelector('#bball-date');
-    const bballFetchMsg  = document.querySelector('#bball-fetch-msg');
-    const bballMatchup   = document.querySelector('#bball-matchup');
+    const bballFetchBtn    = document.querySelector('#bball-fetch-btn');
+    const bballDateInput   = document.querySelector('#bball-date');
+    const bballNsPlayerName = document.querySelector('#bball-ns-player-name');
+    const bballNsFetchMsg  = document.querySelector('#bball-ns-fetch-msg');
+    const bballNsMatchup   = document.querySelector('#bball-ns-matchup');
+    const bballNsInputs = document.querySelectorAll('.bball-ns-fs');
+    const bballNsVals   = document.querySelectorAll('#bball-name-mode .bball-val');
+    const bballNsPts  = document.getElementById('bball-ns-pts');
+    const bballNsRebs = document.getElementById('bball-ns-rebs');
+    const bballNsAst  = document.getElementById('bball-ns-asst');
+    const bballNsBlk  = document.getElementById('bball-ns-blk');
+    const bballNsStl  = document.getElementById('bball-ns-stl');
+    const bballNsTo   = document.getElementById('bball-ns-to');
+    const bballNsTotalEl = document.querySelector('#bball-ns-total-fs');
+    const bballNsGoBtn   = document.querySelector('#bball-ns-btn');
+    const bballNsClearBtn = document.querySelector('#bball-ns-clear');
+    const bballNsCopyBtn  = document.querySelector('#bball-ns-copy');
+    let   bballNsHzsChk   = document.querySelector('#bball-ns-hzs-checkbox');
+    const bballNsIds = {
+        pts: bballNsPts, rebs: bballNsRebs, asst: bballNsAst, blk: bballNsBlk, stl: bballNsStl, to: bballNsTo,
+        pointsVal: document.querySelector('#bball-ns-points-val'),
+        reboundsVal: document.querySelector('#bball-ns-rebounds-val'),
+        assistsVal: document.querySelector('#bball-ns-assists-val'),
+        blocksVal: document.querySelector('#bball-ns-blocks-val'),
+        stealsVal: document.querySelector('#bball-ns-steals-val'),
+        turnoversVal: document.querySelector('#bball-ns-turnovers-val'),
+        totalEl: bballNsTotalEl, inputs: bballNsInputs,
+        playerName: () => bballNsPlayerName.value,
+        breakdownSel: '#bball-ns-breakdown', textareaBtnContSel: '#bball-ns-textarea-btn-cont',
+        breakdownWrapId: 'bball-ns-breakdown-wrap', hzsChk: bballNsHzsChk,
+    };
+    bballNsGoBtn.addEventListener('click', () => {
+        bballNsIds.hzsChk = bballNsHzsChk;
+        bballNsHzsChk = computeBballFS(bballNsIds);
+    });
+    bballNsClearBtn.addEventListener('click', () => {
+        bballNsInputs.forEach(i => i.value = '');
+        bballNsVals.forEach(v => v.innerHTML = '');
+        bballNsPlayerName.value = '';
+        bballNsTotalEl.innerHTML = '';
+        document.querySelector('#bball-ns-breakdown').innerHTML = '';
+        document.querySelector('#bball-ns-textarea-btn-cont').style.display = 'none';
+        document.getElementById('bball-ns-breakdown-wrap').style.display = 'none';
+        bballNsMatchup.textContent = '';
+        bballNsFetchMsg.textContent = '';
+    });
+    bballNsCopyBtn.addEventListener('click', () => copyBreakdown('#bball-ns-breakdown'));
+
     function setBballFetchMsg(msg, type = '') {
-        bballFetchMsg.textContent = msg;
-        bballFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+        bballNsFetchMsg.textContent = msg;
+        bballNsFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
     }
     /** NBA season is labeled by its ending year (e.g. Oct 2025 - Jun 2026 => season "2026"). */
     function seasonFromDate(dateStr) {
@@ -245,12 +713,12 @@ window.onload = function () {
         return result;
     }
     async function fetchNbaPlayerStats() {
-        const name = document.getElementById('bball-player-name').value.trim();
+        const name = bballNsPlayerName.value.trim();
         const date = bballDateInput.value; // YYYY-MM-DD
         if (!name) { setBballFetchMsg('Enter a player name first.', 'error'); return; }
         if (!date) { setBballFetchMsg('Pick a date first.', 'error'); return; }
         bballFetchBtn.disabled = true;
-        bballMatchup.textContent = '';
+        bballNsMatchup.textContent = '';
         setBballFetchMsg('Looking up player…', 'loading');
         try {
             const player = await resolveEspnAthlete(name);
@@ -274,18 +742,19 @@ window.onload = function () {
                 return;
             }
             const stats = mapGamelogStats(gamelog, statsArray);
-            bballPts.value  = stats.points;
-            bballRebs.value = stats.totalRebounds;
-            bballAst.value  = stats.assists;
-            bballBlk.value  = stats.blocks;
-            bballStl.value  = stats.steals;
-            bballTo.value   = stats.turnovers;
+            bballNsPts.value  = stats.points;
+            bballNsRebs.value = stats.totalRebounds;
+            bballNsAst.value  = stats.assists;
+            bballNsBlk.value  = stats.blocks;
+            bballNsStl.value  = stats.steals;
+            bballNsTo.value   = stats.turnovers;
+            bballNsPlayerName.value = player.fullName;
             const oppName = eventMatch.meta.opponent?.displayName || '';
             if (oppName) {
-                bballMatchup.textContent = `vs ${oppName} (${eventMatch.meta.gameResult} ${eventMatch.meta.score})`;
+                bballNsMatchup.textContent = `vs ${oppName} (${eventMatch.meta.gameResult} ${eventMatch.meta.score})`;
             }
             setBballFetchMsg(`Loaded ${player.fullName} — ${date}.`, 'success');
-            bballGoBtn.click(); // auto-calculate
+            bballNsGoBtn.click(); // auto-calculate
         } catch (err) {
             setBballFetchMsg(
                 'Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message,
@@ -297,12 +766,68 @@ window.onload = function () {
     }
     bballFetchBtn.addEventListener('click', fetchNbaPlayerStats);
 
-    // ── Basketball — Browse by date/league/team/player (drill-down alternative) ──
+    // ── Basketball — Browse by date/league/team/player (Player Search mode) ──
         const bballLoadGamesBtn = document.querySelector('#bball-load-games-btn');
         const bballGameRow      = document.querySelector('#bball-game-row');
         const bballGameSelect   = document.querySelector('#bball-game-select');
         const bballTeamRow      = document.querySelector('#bball-team-row');
         const bballTeamSelect   = document.querySelector('#bball-team-select');
+        const bballPsFetchMsg   = document.querySelector('#bball-ps-fetch-msg');
+        const bballPsMatchup    = document.querySelector('#bball-ps-matchup');
+        const bballPsInputs = document.querySelectorAll('.bball-ps-fs');
+        const bballPsVals   = document.querySelectorAll('#bball-search-mode .bball-val');
+        const bballPsPts  = document.getElementById('bball-ps-pts');
+        const bballPsRebs = document.getElementById('bball-ps-rebs');
+        const bballPsAst  = document.getElementById('bball-ps-asst');
+        const bballPsBlk  = document.getElementById('bball-ps-blk');
+        const bballPsStl  = document.getElementById('bball-ps-stl');
+        const bballPsTo   = document.getElementById('bball-ps-to');
+        const bballPsTotalEl = document.querySelector('#bball-ps-total-fs');
+        const bballPsGoBtn   = document.querySelector('#bball-ps-btn');
+        const bballPsClearBtn = document.querySelector('#bball-ps-clear');
+        const bballPsCopyBtn  = document.querySelector('#bball-ps-copy');
+        let   bballPsHzsChk   = document.querySelector('#bball-ps-hzs-checkbox');
+        let   bballPsCurrentPlayerName = ''; // Player Search has no name *input* (player is chosen via dropdown) — tracked here for the breakdown header instead
+        const bballPsIds = {
+            pts: bballPsPts, rebs: bballPsRebs, asst: bballPsAst, blk: bballPsBlk, stl: bballPsStl, to: bballPsTo,
+            pointsVal: document.querySelector('#bball-ps-points-val'),
+            reboundsVal: document.querySelector('#bball-ps-rebounds-val'),
+            assistsVal: document.querySelector('#bball-ps-assists-val'),
+            blocksVal: document.querySelector('#bball-ps-blocks-val'),
+            stealsVal: document.querySelector('#bball-ps-steals-val'),
+            turnoversVal: document.querySelector('#bball-ps-turnovers-val'),
+            totalEl: bballPsTotalEl, inputs: bballPsInputs,
+            playerName: () => bballPsCurrentPlayerName,
+            breakdownSel: '#bball-ps-breakdown', textareaBtnContSel: '#bball-ps-textarea-btn-cont',
+            breakdownWrapId: 'bball-ps-breakdown-wrap', hzsChk: bballPsHzsChk,
+        };
+        bballPsGoBtn.addEventListener('click', () => {
+            bballPsIds.hzsChk = bballPsHzsChk;
+            bballPsHzsChk = computeBballFS(bballPsIds);
+        });
+        bballPsClearBtn.addEventListener('click', () => {
+            bballPsInputs.forEach(i => i.value = '');
+            bballPsVals.forEach(v => v.innerHTML = '');
+            bballPsCurrentPlayerName = '';
+            bballPsTotalEl.innerHTML = '';
+            document.querySelector('#bball-ps-breakdown').innerHTML = '';
+            document.querySelector('#bball-ps-textarea-btn-cont').style.display = 'none';
+            document.getElementById('bball-ps-breakdown-wrap').style.display = 'none';
+            bballPsMatchup.textContent = '';
+            bballPsFetchMsg.textContent = '';
+            bballGameSelect.innerHTML = '';
+            bballTeamSelect.innerHTML = '';
+            bballPlayerSelect.innerHTML = '';
+            bballGameRow.style.display = 'none';
+            bballTeamRow.style.display = 'none';
+            bballPlayerRow.style.display = 'none';
+        });
+        bballPsCopyBtn.addEventListener('click', () => copyBreakdown('#bball-ps-breakdown'));
+
+        function setBballPsFetchMsg(msg, type = '') {
+            bballPsFetchMsg.textContent = msg;
+            bballPsFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+        }
 
         let bballScoreboardCache = null; // last fetched scoreboard response, keyed for lookup on game-select change
 
@@ -317,7 +842,7 @@ window.onload = function () {
 
         async function loadBballGames() {
             const date = bballDateInput.value;
-            if (!date) { setBballFetchMsg('Pick a date first.', 'error'); return; }
+            if (!date) { setBballPsFetchMsg('Pick a date first.', 'error'); return; }
 
             const league = getSelectedBballLeague();
             bballLoadGamesBtn.disabled = true;
@@ -325,7 +850,7 @@ window.onload = function () {
             bballTeamRow.style.display = 'none';
             bballGameSelect.innerHTML = '';
             bballTeamSelect.innerHTML = '';
-            setBballFetchMsg('Loading games…', 'loading');
+            setBballPsFetchMsg('Loading games…', 'loading');
 
             try {
                 const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/${league}/scoreboard?dates=${toEspnDateParam(date)}`);
@@ -335,16 +860,16 @@ window.onload = function () {
 
                 const events = data.events || [];
                 if (events.length === 0) {
-                    setBballFetchMsg(`No games found on ${date}.`, 'error');
+                    setBballPsFetchMsg(`No games found on ${date}.`, 'error');
                     return;
                 }
 
                 bballGameSelect.innerHTML = '<option value="">Select a game…</option>' +
                     events.map(ev => `<option value="${ev.id}">${ev.shortName || ev.name}</option>`).join('');
                 bballGameRow.style.display = 'flex';
-                setBballFetchMsg(`Found ${events.length} game(s) on ${date}.`, 'success');
+                setBballPsFetchMsg(`Found ${events.length} game(s) on ${date}.`, 'success');
             } catch (err) {
-                setBballFetchMsg(
+                setBballPsFetchMsg(
                     'Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message,
                     'error'
                 );
@@ -402,7 +927,7 @@ window.onload = function () {
                 bballPlayerRow.style.display = 'none';
                 if (!eventId || !teamId) return;
 
-                setBballFetchMsg('Loading roster…', 'loading');
+                setBballPsFetchMsg('Loading roster…', 'loading');
                 try {
                     const players   = await fetchBballBoxscore(eventId);
                     const teamBlock = players.find(p => p.team.id === teamId);
@@ -410,16 +935,16 @@ window.onload = function () {
                     const active    = athletes.filter(a => !a.didNotPlay);
 
                     if (active.length === 0) {
-                        setBballFetchMsg('No players with stats found for that team.', 'error');
+                        setBballPsFetchMsg('No players with stats found for that team.', 'error');
                         return;
                     }
 
                     bballPlayerSelect.innerHTML = '<option value="">Select a player…</option>' +
                         active.map(a => `<option value="${a.athlete.id}">${a.athlete.displayName} (${a.athlete.position?.abbreviation || ''})</option>`).join('');
                     bballPlayerRow.style.display = 'flex';
-                    setBballFetchMsg('Pick a player to load their stats.', '');
+                    setBballPsFetchMsg('Pick a player to load their stats.', '');
                 } catch (err) {
-                    setBballFetchMsg(
+                    setBballPsFetchMsg(
                         'Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message,
                         'error'
                     );
@@ -437,102 +962,45 @@ window.onload = function () {
                 const statBlock      = teamBlock?.statistics?.[0];
                 const athleteEntry   = statBlock?.athletes?.find(a => a.athlete.id === athleteId);
                 if (!statBlock || !athleteEntry) {
-                    setBballFetchMsg("Could not find that player's stats.", 'error');
+                    setBballPsFetchMsg("Could not find that player's stats.", 'error');
                     return;
                 }
 
                 const stats = {};
                 statBlock.keys.forEach((key, i) => { stats[key] = athleteEntry.stats[i]; });
 
-                bballPts.value  = stats.points;
-                bballRebs.value = stats.rebounds;
-                bballAst.value  = stats.assists;
-                bballBlk.value  = stats.blocks;
-                bballStl.value  = stats.steals;
-                bballTo.value   = stats.turnovers;
+                bballPsPts.value  = stats.points;
+                bballPsRebs.value = stats.rebounds;
+                bballPsAst.value  = stats.assists;
+                bballPsBlk.value  = stats.blocks;
+                bballPsStl.value  = stats.steals;
+                bballPsTo.value   = stats.turnovers;
 
-                document.getElementById('bball-player-name').value = athleteEntry.athlete.displayName;
+                bballPsCurrentPlayerName = athleteEntry.athlete.displayName;
 
                 const event = bballScoreboardCache?.events.find(ev => ev.id === eventId);
-                bballMatchup.textContent = event ? buildBballMatchupLine(event, teamId) : '';
+                bballPsMatchup.textContent = event ? buildBballMatchupLine(event, teamId) : '';
 
-                setBballFetchMsg(`Loaded ${athleteEntry.athlete.displayName}.`, 'success');
-                bballGoBtn.click(); // auto-calculate
+                setBballPsFetchMsg(`Loaded ${athleteEntry.athlete.displayName}.`, 'success');
+                bballPsGoBtn.click(); // auto-calculate
             });        
 
     // ========================================================
-    //  MLB PITCHER
+    //  MLB — shared infra (API base, player resolver, drill-down helpers)
     // ========================================================
-    const bsballpTotalEl  = document.querySelector('#bsballp-total-fs');
-    const bsballpGoBtn    = document.querySelector('#bsballp-btn');
-    const bsballpClearBtn = document.querySelector('#bsballp-clear');
-    const bsballpCopyBtn  = document.querySelector('#bsballp-copy');
-    const bsballpHeaderEl = document.querySelector('#head-bsballp');
-    let   bsballpHzsChk   = document.querySelector('#bsballp-hzs-checkbox');
-    const bsballpInputs = document.querySelectorAll('.bsballp-fs');
-    const bsballpVals   = document.querySelectorAll('.bsballp-val');
-    const bsballpWinInput = document.getElementById('bsballp-win');
-    const bsballpWinChk   = document.getElementById('bsballp-win-checkbox');
-    const bsballpQSInput  = document.getElementById('bsballp-qs');
-    const bsballpER       = document.getElementById('bsballp-er');
-    const bsballpK        = document.getElementById('bsballp-k');
-    const bsballpOut      = document.getElementById('bsballp-out');
-    bsballpGoBtn.addEventListener('click', () => {
-        // Win (checkbox-driven)
-        const winVal = bsballpWinChk.checked ? 6 : 0;
-        bsballpWinInput.value = bsballpWinChk.checked ? 1 : 0;
-        const erVal  = Number(bsballpER.value) * -3;
-        const kVal   = Number(bsballpK.value)  * 3;
-        const outRaw = Number(bsballpOut.value);
-        // Convert Innings Pitched (IP) → outs  (e.g. 6.2 IP → 6×3 + 2 = 20 outs)
-        const outWhole   = Math.floor(outRaw);
-        const outDecimal = Number((outRaw % 1).toFixed(1));
-        const outPts     = (outWhole * 3) + (outDecimal * 10);
-        // Quality Start: ≥ 6 IP and ≤ 3 ER
-        const qsVal = (Number(bsballpER.value) <= 3 && Number(bsballpOut.value) >= 6) ? 4 : 0;
-        bsballpQSInput.value = qsVal ? 1 : 0;
-        const total = winVal + qsVal + erVal + kVal + outPts;
-        document.querySelector('#bsballp-win-val').innerHTML = `= ${winVal}`;
-        document.querySelector('#bsballp-qs-val').innerHTML  = `= ${qsVal}`;
-        document.querySelector('#bsballp-er-val').innerHTML  = `= ${erVal}`;
-        document.querySelector('#bsballp-k-val').innerHTML   = `= ${kVal}`;
-        document.querySelector('#bsballp-out-val').innerHTML = `= ${outPts}`;
-        bsballpTotalEl.innerHTML = total;
-        fillEmptyInputs(bsballpInputs);
-        const statLines = [
-            `Win: 6 pts = ${winVal}`,
-            `Quality Start: 4 pts = ${qsVal}`,
-            `Earned Run: -3 pt (${bsballpER.value}) = ${erVal}`,
-            `Strikeout: 3 pt (${bsballpK.value}) = ${kVal}`,
-            `Out: 1 pt (${outPts}) = ${outPts}`,
-        ];
-        const bsballpHeader   = buildHeader(document.getElementById('bsballp-player-name').value);
-        const bsballpBreakdown = withHeader(bsballpHeader, buildBreakdown(statLines, total));
-        showBreakdown('#bsballp-breakdown', '#bsballp-textarea-btn-cont', bsballpBreakdown);
-        bsballpHzsChk = setupHideZerosCheckbox(bsballpHzsChk, '#bsballp-breakdown', statLines, bsballpInputs, total, '', bsballpHeader);
-    });
-    bsballpClearBtn.addEventListener('click', () => {
-        bsballpInputs.forEach(i => i.value = '');
-        bsballpVals.forEach(v => v.innerHTML = '');
-        bsballpWinChk.checked = false;
-        document.getElementById('bsballp-player-name').value = '';
-        bsballpTotalEl.innerHTML = '';
-        document.querySelector('#bsballp-breakdown').innerHTML = '';
-        document.querySelector('#bsballp-textarea-btn-cont').style.display = 'none';
-        document.getElementById('bsballp-matchup').textContent = '';
-        document.getElementById('bsballp-fetch-msg').textContent = '';
-    });
-    bsballpCopyBtn.addEventListener('click',  () => copyBreakdown('#bsballp-breakdown'));
-    bsballpHeaderEl.addEventListener('click', () => toggleSection('#content-bsballp'));
-    // ── MLB Pitcher — Auto-fill from MLB Stats API ────────────────
-    // Reuses MLB_API and resolveMlbPlayer() defined in the Hitter section.
-    const bsballpFetchBtn  = document.querySelector('#bsballp-fetch-btn');
-    const bsballpDateInput = document.querySelector('#bsballp-date');
-    const bsballpFetchMsg  = document.querySelector('#bsballp-fetch-msg');
-    const bsballpMatchup   = document.querySelector('#bsballp-matchup');
-    function setPitcherFetchMsg(msg, type = '') {
-        bsballpFetchMsg.textContent = msg;
-        bsballpFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    // Data source: statsapi.mlb.com/api/v1 (official, free, no auth).
+    const MLB_API = 'https://statsapi.mlb.com/api/v1';
+
+    /** Resolve a player name to their MLB person record for a given season. */
+    async function resolveMlbPlayer(name, season) {
+        const res = await fetch(`${MLB_API}/sports/1/players?season=${season}`);
+        if (!res.ok) throw new Error('player list request failed');
+        const data = await res.json();
+        const target = name.trim().toLowerCase();
+        const people = data.people || [];
+        return people.find(p => p.fullName.toLowerCase() === target)
+            || people.find(p => p.fullName.toLowerCase().includes(target))
+            || null;
     }
     // Innings pitched helpers: "6.2" ⇄ total outs (2 outs = 0.2 IP)
     function ipToOuts(ip) {
@@ -544,14 +1012,358 @@ window.onload = function () {
     function outsToIp(outs) {
         return `${Math.floor(outs / 3)}.${outs % 3}`;
     }
+
+    /** Fantasy score + breakdown-line builders — pure functions, shared
+     *  between Manual/Name-Search's Go handlers and Player Search's table,
+     *  so the formula only lives in one place. */
+    function computePitcherFS(s) {
+        const outs = s.outs ?? ipToOuts(s.inningsPitched || '0.0');
+        const winVal = (s.wins || 0) > 0 ? 6 : 0;
+        const erVal  = (s.earnedRuns || 0) * -3;
+        const kVal   = (s.strikeOuts || 0) * 3;
+        const outVal = outs;
+        const qsVal  = ((s.earnedRuns || 0) <= 3 && outs >= 18) ? 4 : 0; // 18 outs = 6 IP
+        const total = winVal + qsVal + erVal + kVal + outVal;
+        return { total: Number(total.toFixed(1)), winVal, qsVal, erVal, kVal, outVal, outs };
+    }
+    function pitcherStatLines(s, r) {
+        return [
+            `Win: 6 pts = ${r.winVal}`,
+            `Quality Start: 4 pts = ${r.qsVal}`,
+            `Earned Run: -3 pt (${s.earnedRuns || 0}) = ${r.erVal}`,
+            `Strikeout: 3 pt (${s.strikeOuts || 0}) = ${r.kVal}`,
+            `Out: 1 pt (${r.outs}) = ${r.outVal}`,
+        ];
+    }
+    function computeHitterFS(s) {
+        const singles = Math.max(0, (s.hits || 0) - (s.doubles || 0) - (s.triples || 0) - (s.homeRuns || 0));
+        const singVal = singles * 3;
+        const doubVal = (s.doubles || 0) * 5;
+        const tripVal = (s.triples || 0) * 8;
+        const hrVal   = (s.homeRuns || 0) * 10;
+        const rVal    = (s.runs || 0) * 2;
+        const rbiVal  = (s.rbi || 0) * 2;
+        const bobVal  = (s.baseOnBalls || 0) * 2;
+        const hbpVal  = (s.hitByPitch || 0) * 2;
+        const sbVal   = (s.stolenBases || 0) * 5;
+        const total = singVal + doubVal + tripVal + hrVal + rVal + rbiVal + bobVal + hbpVal + sbVal;
+        return { total: Number(total.toFixed(1)), singles, singVal, doubVal, tripVal, hrVal, rVal, rbiVal, bobVal, hbpVal, sbVal };
+    }
+    function hitterStatLines(s, r) {
+        return [
+            `Single: 3 pts (${r.singles}) = ${r.singVal}`,
+            `Double: 5 pts (${s.doubles || 0}) = ${r.doubVal}`,
+            `Triple: 8 pts (${s.triples || 0}) = ${r.tripVal}`,
+            `Home Run: 10 pts (${s.homeRuns || 0}) = ${r.hrVal}`,
+            `Run: 2 pts (${s.runs || 0}) = ${r.rVal}`,
+            `Run Batted In: 2 pts (${s.rbi || 0}) = ${r.rbiVal}`,
+            `Base On Balls: 2 pts (${s.baseOnBalls || 0}) = ${r.bobVal}`,
+            `Hit By Pitch: 2 pts (${s.hitByPitch || 0}) = ${r.hbpVal}`,
+            `Stolen Base: 5 pts (${s.stolenBases || 0}) = ${r.sbVal}`,
+        ];
+    }
+
+    /**
+     * Player Search mode, shared by Pitcher/Hitter: date → league → pick
+     * ONE game → both teams' rosters computed and shown at once in a
+     * table (team tabs to switch sides), click a value for its breakdown.
+     * Unlike the old drill-down (date→league→game→team→player, one
+     * player at a time), this surfaces the whole game in one view — no
+     * PDF here (MLB.com doesn't publish a gamebook like NBA/WNBA do), so
+     * this is built straight from the same boxscore JSON the old
+     * drill-down already fetched, just reorganized into a table instead
+     * of a 3rd dropdown.
+     */
+    function initMlbTeamTable({ prefix, statCategory, computeFS, buildStatLines }) {
+        const dateInput      = document.querySelector(`#${prefix}-date`);
+        const loadGamesBtn   = document.querySelector(`#${prefix}-load-games-btn`);
+        const gameRow        = document.querySelector(`#${prefix}-game-row`);
+        const gameSelect     = document.querySelector(`#${prefix}-game-select`);
+        const fetchMsg       = document.querySelector(`#${prefix}-ps-fetch-msg`);
+        const teamTabs       = document.querySelector(`#${prefix}-ps-team-tabs`);
+        const resultsWrap    = document.querySelector(`#${prefix}-ps-results-wrap`);
+        const resultsHead    = document.querySelector(`#${prefix}-ps-results-head`);
+        const resultsBody    = document.querySelector(`#${prefix}-ps-results-body`);
+        const breakdownLabel = document.querySelector(`#${prefix}-ps-breakdown-label`);
+        const breakdownArea  = document.querySelector(`#${prefix}-ps-breakdown-area`);
+        const breakdownEl    = document.querySelector(`#${prefix}-ps-breakdown`);
+        const breakdownCopy  = document.querySelector(`#${prefix}-ps-breakdown-copy`);
+
+        function setMsg(msg, type = '') {
+            fetchMsg.textContent = msg;
+            fetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+        }
+        function hideResults() {
+            teamTabs.innerHTML = ''; teamTabs.style.display = 'none';
+            resultsWrap.style.display = 'none';
+            breakdownLabel.style.display = 'none'; breakdownArea.style.display = 'none';
+        }
+
+        let gamesCache = {};
+        let lastRows = [];       // flat list across both teams, for click lookup
+        let activeTeam = null;
+
+        function getSelectedSportId() {
+            return document.querySelector(`input[name="${prefix}-league"]:checked`)?.value || '1';
+        }
+
+        async function loadGames() {
+            const date = dateInput.value;
+            if (!date) { setMsg('Pick a date first.', 'error'); return; }
+            const sportId = getSelectedSportId();
+            loadGamesBtn.disabled = true;
+            gameRow.style.display = 'none';
+            gameSelect.innerHTML = '';
+            hideResults();
+            setMsg('Loading games…', 'loading');
+            try {
+                const res = await fetch(`${MLB_API}/schedule?sportId=${sportId}&date=${date}`);
+                if (!res.ok) throw new Error('schedule request failed');
+                const data = await res.json();
+                const games = data.dates?.[0]?.games || [];
+                gamesCache = {};
+                games.forEach(g => { gamesCache[g.gamePk] = g; });
+                if (games.length === 0) { setMsg(`No games found on ${date}.`, 'error'); return; }
+                gameSelect.innerHTML = '<option value="">Select a game…</option>' +
+                    games.map(g => {
+                        const dhSuffix = g.doubleHeader !== 'N' ? ` (Game ${g.gameNumber})` : '';
+                        return `<option value="${g.gamePk}">${g.teams.away.team.name} @ ${g.teams.home.team.name}${dhSuffix}</option>`;
+                    }).join('');
+                gameRow.style.display = 'flex';
+                setMsg(`Found ${games.length} game(s) on ${date}.`, 'success');
+            } catch (err) {
+                setMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+            } finally {
+                loadGamesBtn.disabled = false;
+            }
+        }
+        loadGamesBtn.addEventListener('click', loadGames);
+
+        async function fetchBoxscore(gamePk) {
+            const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`, { cache: 'no-store' });
+            if (!res.ok) throw new Error('boxscore request failed');
+            const data = await res.json();
+            return data.teams || {};
+        }
+
+        /** Build rows for one team — only players with real stats in this
+         *  category (an empty stats object means a full-game DNP). */
+        function buildRowsForTeam(teamsData, homeAwayKey, teamName) {
+            const players = Object.values(teamsData[homeAwayKey]?.players || {});
+            return players
+                .filter(p => Object.keys(p.stats?.[statCategory] || {}).length > 0)
+                .map(p => {
+                    const stats = p.stats[statCategory];
+                    const r = computeFS(stats);
+                    return {
+                        team: teamName, jersey: p.jerseyNumber || '-', name: p.person.fullName,
+                        fs: r.total, statLines: buildStatLines(stats, r),
+                    };
+                });
+        }
+
+        function renderResults() {
+            const rows = lastRows.filter(r => r.team === activeTeam);
+            resultsHead.innerHTML = '<tr><th>#</th><th>Player</th><th>Total FS</th></tr>';
+            resultsBody.innerHTML = rows.map(r =>
+                `<tr><td>#${r.jersey}</td><td>${r.name}</td><td><span class="gamebook-cell-clickable" data-key="${r.team}__${r.jersey}">${r.fs}</span></td></tr>`
+            ).join('');
+            resultsWrap.style.display = 'block';
+        }
+
+        resultsBody.addEventListener('click', e => {
+            const cell = e.target.closest('.gamebook-cell-clickable');
+            if (!cell) return;
+            const row = lastRows.find(r => `${r.team}__${r.jersey}` === cell.dataset.key);
+            if (!row) return;
+            resultsBody.querySelectorAll('.gamebook-cell-active').forEach(el => el.classList.remove('gamebook-cell-active'));
+            cell.classList.add('gamebook-cell-active');
+            const header = buildHeader(row.name);
+            breakdownEl.value = `${header}\n${row.statLines.join('\n')}\n\nTOTAL FS = ${row.fs}`;
+            breakdownLabel.style.display = 'block';
+            breakdownArea.style.display = 'block';
+        });
+        breakdownCopy.addEventListener('click', () => {
+            breakdownEl.select();
+            breakdownEl.setSelectionRange(0, 99999);
+            triggerToastBtn.click();
+            navigator.clipboard.writeText(breakdownEl.value);
+        });
+
+        gameSelect.addEventListener('change', async () => {
+            const gamePk = gameSelect.value;
+            hideResults();
+            if (!gamePk || !gamesCache[gamePk]) return;
+
+            setMsg('Loading rosters…', 'loading');
+            try {
+                const teamsData = await fetchBoxscore(gamePk);
+                const g = gamesCache[gamePk];
+                const awayName = g.teams.away.team.name;
+                const homeName = g.teams.home.team.name;
+
+                lastRows = [
+                    ...buildRowsForTeam(teamsData, 'away', awayName),
+                    ...buildRowsForTeam(teamsData, 'home', homeName),
+                ];
+
+                if (lastRows.length === 0) {
+                    setMsg('No players with stats found for that game.', 'error');
+                    return;
+                }
+
+                const teams = [awayName, homeName];
+                activeTeam = teams[0];
+                teamTabs.innerHTML = teams.map(t =>
+                    `<label class="round-pill" style="width:${Math.floor(100 / teams.length) - 1}%">
+                        <input type="radio" name="${prefix}-ps-team-tab" value="${t}" ${t === activeTeam ? 'checked' : ''}> ${t}
+                     </label>`
+                ).join('');
+                teamTabs.querySelectorAll('input[type="radio"]').forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        activeTeam = radio.value;
+                        breakdownLabel.style.display = 'none'; breakdownArea.style.display = 'none';
+                        renderResults();
+                    });
+                });
+                teamTabs.style.display = 'flex';
+
+                renderResults();
+                setMsg(`Loaded ${lastRows.length} player(s). Click any value for its breakdown.`, 'success');
+            } catch (err) {
+                setMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
+            }
+        });
+    }
+
+    // ========================================================
+    //  MLB PITCHER
+    // ========================================================
+    const bsballpHeaderEl = document.querySelector('#head-bsballp');
+    bsballpHeaderEl.addEventListener('click', () => toggleSection('#content-bsballp'));
+
+    // ── Mode toggle (Player Search / Name Search / Manual) ──
+    document.querySelectorAll('.bsballp-mode-radio').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const isSearch = document.getElementById('bsballp-mode-search').checked;
+            const isName   = document.getElementById('bsballp-mode-name').checked;
+            const isManual = !isSearch && !isName;
+            document.getElementById('bsballp-search-mode').style.display = isSearch ? 'block' : 'none';
+            document.getElementById('bsballp-name-mode').style.display   = isName   ? 'block' : 'none';
+            document.getElementById('bsballp-manual-mode').style.display = isManual ? 'block' : 'none';
+            document.getElementById('bsballp-date-row').style.display    = isManual ? 'none'  : 'block';
+        });
+    });
+
+    // ── Manual mode (keeps the original bsballp-* IDs) ──
+    const bsballpTotalEl  = document.querySelector('#bsballp-total-fs');
+    const bsballpGoBtn    = document.querySelector('#bsballp-btn');
+    const bsballpClearBtn = document.querySelector('#bsballp-clear');
+    const bsballpCopyBtn  = document.querySelector('#bsballp-copy');
+    let   bsballpHzsChk   = document.querySelector('#bsballp-hzs-checkbox');
+    const bsballpInputs = document.querySelectorAll('.bsballp-fs');
+    const bsballpVals   = document.querySelectorAll('#bsballp-manual-mode .bsballp-val');
+    const bsballpWinInput = document.getElementById('bsballp-win');
+    const bsballpWinChk   = document.getElementById('bsballp-win-checkbox');
+    const bsballpQSInput  = document.getElementById('bsballp-qs');
+    const bsballpER       = document.getElementById('bsballp-er');
+    const bsballpK        = document.getElementById('bsballp-k');
+    const bsballpOut      = document.getElementById('bsballp-out');
+    bsballpGoBtn.addEventListener('click', () => {
+        const rawOuts = ipToOuts(bsballpOut.value);
+        const r = computePitcherFS({ wins: bsballpWinChk.checked ? 1 : 0, earnedRuns: Number(bsballpER.value), strikeOuts: Number(bsballpK.value), outs: rawOuts });
+        bsballpWinInput.value = bsballpWinChk.checked ? 1 : 0;
+        bsballpQSInput.value  = r.qsVal ? 1 : 0;
+        document.querySelector('#bsballp-win-val').innerHTML = `= ${r.winVal}`;
+        document.querySelector('#bsballp-qs-val').innerHTML  = `= ${r.qsVal}`;
+        document.querySelector('#bsballp-er-val').innerHTML  = `= ${r.erVal}`;
+        document.querySelector('#bsballp-k-val').innerHTML   = `= ${r.kVal}`;
+        document.querySelector('#bsballp-out-val').innerHTML = `= ${r.outVal}`;
+        bsballpTotalEl.innerHTML = r.total;
+        fillEmptyInputs(bsballpInputs);
+        const statLines = pitcherStatLines({ earnedRuns: Number(bsballpER.value), strikeOuts: Number(bsballpK.value) }, r);
+        const bsballpHeader   = buildHeader(document.getElementById('bsballp-player-name').value);
+        const bsballpBreakdown = withHeader(bsballpHeader, buildBreakdown(statLines, r.total));
+        showBreakdown('#bsballp-breakdown', '#bsballp-textarea-btn-cont', bsballpBreakdown);
+        document.getElementById('bsballp-breakdown-wrap').style.display = 'block';
+        bsballpHzsChk = setupHideZerosCheckbox(bsballpHzsChk, '#bsballp-breakdown', statLines, bsballpInputs, r.total, '', bsballpHeader);
+    });
+    bsballpClearBtn.addEventListener('click', () => {
+        bsballpInputs.forEach(i => i.value = '');
+        bsballpVals.forEach(v => v.innerHTML = '');
+        bsballpWinChk.checked = false;
+        document.getElementById('bsballp-player-name').value = '';
+        bsballpTotalEl.innerHTML = '';
+        document.querySelector('#bsballp-breakdown').innerHTML = '';
+        document.querySelector('#bsballp-textarea-btn-cont').style.display = 'none';
+        document.getElementById('bsballp-breakdown-wrap').style.display = 'none';
+    });
+    bsballpCopyBtn.addEventListener('click', () => copyBreakdown('#bsballp-breakdown'));
+
+    // ── Name Search mode (fully independent — own fields, own breakdown) ──
+    const bsballpFetchBtn      = document.querySelector('#bsballp-fetch-btn');
+    const bsballpDateInput     = document.querySelector('#bsballp-date');
+    const bsballpNsPlayerName  = document.querySelector('#bsballp-ns-player-name');
+    const bsballpNsFetchMsg    = document.querySelector('#bsballp-ns-fetch-msg');
+    const bsballpNsMatchup     = document.querySelector('#bsballp-ns-matchup');
+    const bsballpNsInputs = document.querySelectorAll('.bsballp-ns-fs');
+    const bsballpNsVals   = document.querySelectorAll('#bsballp-name-mode .bsballp-ns-val');
+    const bsballpNsWinInput = document.getElementById('bsballp-ns-win');
+    const bsballpNsWinChk   = document.getElementById('bsballp-ns-win-checkbox');
+    const bsballpNsQSInput  = document.getElementById('bsballp-ns-qs');
+    const bsballpNsER       = document.getElementById('bsballp-ns-er');
+    const bsballpNsK        = document.getElementById('bsballp-ns-k');
+    const bsballpNsOut      = document.getElementById('bsballp-ns-out');
+    const bsballpNsTotalEl  = document.querySelector('#bsballp-ns-total-fs');
+    const bsballpNsGoBtn    = document.querySelector('#bsballp-ns-btn');
+    const bsballpNsClearBtn = document.querySelector('#bsballp-ns-clear');
+    const bsballpNsCopyBtn  = document.querySelector('#bsballp-ns-copy');
+    let   bsballpNsHzsChk   = document.querySelector('#bsballp-ns-hzs-checkbox');
+    bsballpNsGoBtn.addEventListener('click', () => {
+        const rawOuts = ipToOuts(bsballpNsOut.value);
+        const r = computePitcherFS({ wins: bsballpNsWinChk.checked ? 1 : 0, earnedRuns: Number(bsballpNsER.value), strikeOuts: Number(bsballpNsK.value), outs: rawOuts });
+        bsballpNsWinInput.value = bsballpNsWinChk.checked ? 1 : 0;
+        bsballpNsQSInput.value  = r.qsVal ? 1 : 0;
+        document.querySelector('#bsballp-ns-win-val').innerHTML = `= ${r.winVal}`;
+        document.querySelector('#bsballp-ns-qs-val').innerHTML  = `= ${r.qsVal}`;
+        document.querySelector('#bsballp-ns-er-val').innerHTML  = `= ${r.erVal}`;
+        document.querySelector('#bsballp-ns-k-val').innerHTML   = `= ${r.kVal}`;
+        document.querySelector('#bsballp-ns-out-val').innerHTML = `= ${r.outVal}`;
+        bsballpNsTotalEl.innerHTML = r.total;
+        fillEmptyInputs(bsballpNsInputs);
+        const statLines = pitcherStatLines({ earnedRuns: Number(bsballpNsER.value), strikeOuts: Number(bsballpNsK.value) }, r);
+        const header = buildHeader(bsballpNsPlayerName.value);
+        const breakdown = withHeader(header, buildBreakdown(statLines, r.total));
+        showBreakdown('#bsballp-ns-breakdown', '#bsballp-ns-textarea-btn-cont', breakdown);
+        document.getElementById('bsballp-ns-breakdown-wrap').style.display = 'block';
+        bsballpNsHzsChk = setupHideZerosCheckbox(bsballpNsHzsChk, '#bsballp-ns-breakdown', statLines, bsballpNsInputs, r.total, '', header);
+    });
+    bsballpNsClearBtn.addEventListener('click', () => {
+        bsballpNsInputs.forEach(i => i.value = '');
+        bsballpNsVals.forEach(v => v.innerHTML = '');
+        bsballpNsWinChk.checked = false;
+        bsballpNsPlayerName.value = '';
+        bsballpNsTotalEl.innerHTML = '';
+        document.querySelector('#bsballp-ns-breakdown').innerHTML = '';
+        document.querySelector('#bsballp-ns-textarea-btn-cont').style.display = 'none';
+        document.getElementById('bsballp-ns-breakdown-wrap').style.display = 'none';
+        bsballpNsMatchup.textContent = '';
+        bsballpNsFetchMsg.textContent = '';
+    });
+    bsballpNsCopyBtn.addEventListener('click', () => copyBreakdown('#bsballp-ns-breakdown'));
+
+    function setPitcherFetchMsg(msg, type = '') {
+        bsballpNsFetchMsg.textContent = msg;
+        bsballpNsFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
     async function fetchMlbPitcherStats() {
-        const name = document.getElementById('bsballp-player-name').value.trim();
+        const name = bsballpNsPlayerName.value.trim();
         const date = bsballpDateInput.value;
         if (!name) { setPitcherFetchMsg('Enter a player name first.', 'error'); return; }
         if (!date) { setPitcherFetchMsg('Pick a date first.', 'error'); return; }
         const season = date.slice(0, 4);
         bsballpFetchBtn.disabled = true;
-        bsballpMatchup.textContent = '';
+        bsballpNsMatchup.textContent = '';
         setPitcherFetchMsg('Looking up player…', 'loading');
         try {
             const player = await resolveMlbPlayer(name, season);
@@ -569,7 +1381,6 @@ window.onload = function () {
                 setPitcherFetchMsg(`${player.fullName} has no pitching log on ${date}.`, 'error');
                 return;
             }
-            // Aggregate (sums doubleheaders; innings summed via outs)
             const agg = games.reduce((a, g) => {
                 const s = g.stat || {};
                 a.earnedRuns += s.earnedRuns || 0;
@@ -578,18 +1389,17 @@ window.onload = function () {
                 a.outs       += ipToOuts(s.inningsPitched);
                 return a;
             }, { earnedRuns:0, strikeOuts:0, wins:0, outs:0 });
-            // Populate fields — QS and Win points are computed by the Go handler
-            bsballpER.value  = agg.earnedRuns;
-            bsballpK.value   = agg.strikeOuts;
-            bsballpOut.value = outsToIp(agg.outs);
-            bsballpWinChk.checked = agg.wins > 0;
+            bsballpNsER.value  = agg.earnedRuns;
+            bsballpNsK.value   = agg.strikeOuts;
+            bsballpNsOut.value = outsToIp(agg.outs);
+            bsballpNsWinChk.checked = agg.wins > 0;
             const g0 = games[0];
             if (g0.team?.name && g0.opponent?.name) {
-                bsballpMatchup.textContent = `${g0.team.name} vs ${g0.opponent.name}`;
+                bsballpNsMatchup.textContent = `${g0.team.name} vs ${g0.opponent.name}`;
             }
             const dhNote = games.length > 1 ? ` (${games.length} games combined)` : '';
             setPitcherFetchMsg(`Loaded ${player.fullName} — ${date}${dhNote}.`, 'success');
-            bsballpGoBtn.click(); // auto-calculate
+            bsballpNsGoBtn.click(); // auto-calculate
         } catch (err) {
             setPitcherFetchMsg(
                 'Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message,
@@ -600,28 +1410,36 @@ window.onload = function () {
         }
     }
     bsballpFetchBtn.addEventListener('click', fetchMlbPitcherStats);
-    initMlbDrillDown({
-        prefix: 'bsballp',
-        statCategory: 'pitching',
-        goBtn: bsballpGoBtn,
-        applyStats(s) {
-            bsballpER.value  = s.earnedRuns || 0;
-            bsballpK.value   = s.strikeOuts || 0;
-            bsballpOut.value = outsToIp(s.outs ?? ipToOuts(s.inningsPitched || '0.0'));
-            bsballpWinChk.checked = (s.wins || 0) > 0;
-        }
-    });
+
+    initMlbTeamTable({ prefix: 'bsballp', statCategory: 'pitching', computeFS: computePitcherFS, buildStatLines: pitcherStatLines });
+
     // ========================================================
     //  MLB HITTER
     // ========================================================
+    const bsballhHeaderEl = document.querySelector('#head-bsballh');
+    bsballhHeaderEl.addEventListener('click', () => toggleSection('#content-bsballh'));
+
+    // ── Mode toggle (Player Search / Name Search / Manual) ──
+    document.querySelectorAll('.bsballh-mode-radio').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const isSearch = document.getElementById('bsballh-mode-search').checked;
+            const isName   = document.getElementById('bsballh-mode-name').checked;
+            const isManual = !isSearch && !isName;
+            document.getElementById('bsballh-search-mode').style.display = isSearch ? 'block' : 'none';
+            document.getElementById('bsballh-name-mode').style.display   = isName   ? 'block' : 'none';
+            document.getElementById('bsballh-manual-mode').style.display = isManual ? 'block' : 'none';
+            document.getElementById('bsballh-date-row').style.display    = isManual ? 'none'  : 'block';
+        });
+    });
+
+    // ── Manual mode (keeps the original bsballh-* IDs) ──
     const bsballhTotalEl  = document.querySelector('#bsballh-total-fs');
     const bsballhGoBtn    = document.querySelector('#bsballh-btn');
     const bsballhClearBtn = document.querySelector('#bsballh-clear');
     const bsballhCopyBtn  = document.querySelector('#bsballh-copy');
-    const bsballhHeaderEl = document.querySelector('#head-bsballh');
     let   bsballhHzsChk   = document.querySelector('#bsballh-hzs-checkbox');
     const bsballhInputs = document.querySelectorAll('.bsballh-fs');
-    const bsballhVals   = document.querySelectorAll('.bsballh-val');
+    const bsballhVals   = document.querySelectorAll('#bsballh-manual-mode .bsballh-val');
     const bsballhSing = document.getElementById('bsballh-sing');
     const bsballhDoub = document.getElementById('bsballh-doub');
     const bsballhTrip = document.getElementById('bsballh-trip');
@@ -631,44 +1449,34 @@ window.onload = function () {
     const bsballhBOB  = document.getElementById('bsballh-bob');
     const bsballhHBP  = document.getElementById('bsballh-hbp');
     const bsballhSB   = document.getElementById('bsballh-sb');
-    const bsballhMatchup = document.querySelector('#bsballh-matchup');
     bsballhGoBtn.addEventListener('click', () => {
-        const singVal = Number(bsballhSing.value) * 3;
-        const doubVal = Number(bsballhDoub.value) * 5;
-        const tripVal = Number(bsballhTrip.value) * 8;
-        const hrVal   = Number(bsballhHR.value)   * 10;
-        const rVal    = Number(bsballhR.value)     * 2;
-        const rbiVal  = Number(bsballhRBI.value)   * 2;
-        const bobVal  = Number(bsballhBOB.value)   * 2;
-        const hbpVal  = Number(bsballhHBP.value)   * 2;
-        const sbVal   = Number(bsballhSB.value)    * 5;
-        const total = singVal + doubVal + tripVal + hrVal + rVal + rbiVal + bobVal + hbpVal + sbVal;
-        document.querySelector('#bsballh-sing-val').innerHTML = `= ${singVal}`;
-        document.querySelector('#bsballh-doub-val').innerHTML = `= ${doubVal}`;
-        document.querySelector('#bsballh-trip-val').innerHTML = `= ${tripVal}`;
-        document.querySelector('#bsballh-hr-val').innerHTML   = `= ${hrVal}`;
-        document.querySelector('#bsballh-r-val').innerHTML    = `= ${rVal}`;
-        document.querySelector('#bsballh-rbi-val').innerHTML  = `= ${rbiVal}`;
-        document.querySelector('#bsballh-bob-val').innerHTML  = `= ${bobVal}`;
-        document.querySelector('#bsballh-hbp-val').innerHTML  = `= ${hbpVal}`;
-        document.querySelector('#bsballh-sb-val').innerHTML   = `= ${sbVal}`;
-        bsballhTotalEl.innerHTML = total;
+        const r = computeHitterFS({
+            hits: Number(bsballhSing.value) + Number(bsballhDoub.value) + Number(bsballhTrip.value) + Number(bsballhHR.value),
+            doubles: Number(bsballhDoub.value), triples: Number(bsballhTrip.value), homeRuns: Number(bsballhHR.value),
+            runs: Number(bsballhR.value), rbi: Number(bsballhRBI.value), baseOnBalls: Number(bsballhBOB.value),
+            hitByPitch: Number(bsballhHBP.value), stolenBases: Number(bsballhSB.value),
+        });
+        document.querySelector('#bsballh-sing-val').innerHTML = `= ${r.singVal}`;
+        document.querySelector('#bsballh-doub-val').innerHTML = `= ${r.doubVal}`;
+        document.querySelector('#bsballh-trip-val').innerHTML = `= ${r.tripVal}`;
+        document.querySelector('#bsballh-hr-val').innerHTML   = `= ${r.hrVal}`;
+        document.querySelector('#bsballh-r-val').innerHTML    = `= ${r.rVal}`;
+        document.querySelector('#bsballh-rbi-val').innerHTML  = `= ${r.rbiVal}`;
+        document.querySelector('#bsballh-bob-val').innerHTML  = `= ${r.bobVal}`;
+        document.querySelector('#bsballh-hbp-val').innerHTML  = `= ${r.hbpVal}`;
+        document.querySelector('#bsballh-sb-val').innerHTML   = `= ${r.sbVal}`;
+        bsballhTotalEl.innerHTML = r.total;
         fillEmptyInputs(bsballhInputs);
-        const statLines = [
-            `Single: 3 pts (${bsballhSing.value}) = ${singVal}`,
-            `Double: 5 pts (${bsballhDoub.value}) = ${doubVal}`,
-            `Triple: 8 pts (${bsballhTrip.value}) = ${tripVal}`,
-            `Home Run: 10 pts (${bsballhHR.value}) = ${hrVal}`,
-            `Run: 2 pts (${bsballhR.value}) = ${rVal}`,
-            `Run Batted In: 2 pts (${bsballhRBI.value}) = ${rbiVal}`,
-            `Base On Balls: 2 pts (${bsballhBOB.value}) = ${bobVal}`,
-            `Hit By Pitch: 2 pts (${bsballhHBP.value}) = ${hbpVal}`,
-            `Stolen Base: 5 pts (${bsballhSB.value}) = ${sbVal}`,
-        ];
+        const statLines = hitterStatLines({
+            doubles: Number(bsballhDoub.value), triples: Number(bsballhTrip.value), homeRuns: Number(bsballhHR.value),
+            runs: Number(bsballhR.value), rbi: Number(bsballhRBI.value), baseOnBalls: Number(bsballhBOB.value),
+            hitByPitch: Number(bsballhHBP.value), stolenBases: Number(bsballhSB.value),
+        }, r);
         const bsballhHeader   = buildHeader(document.getElementById('bsballh-player-name').value);
-        const bsballhBreakdown = withHeader(bsballhHeader, buildBreakdown(statLines, total));
+        const bsballhBreakdown = withHeader(bsballhHeader, buildBreakdown(statLines, r.total));
         showBreakdown('#bsballh-breakdown', '#bsballh-textarea-btn-cont', bsballhBreakdown);
-        bsballhHzsChk = setupHideZerosCheckbox(bsballhHzsChk, '#bsballh-breakdown', statLines, bsballhInputs, total, '', bsballhHeader);
+        document.getElementById('bsballh-breakdown-wrap').style.display = 'block';
+        bsballhHzsChk = setupHideZerosCheckbox(bsballhHzsChk, '#bsballh-breakdown', statLines, bsballhInputs, r.total, '', bsballhHeader);
     });
     bsballhClearBtn.addEventListener('click', () => {
         bsballhInputs.forEach(i => i.value = '');
@@ -677,195 +1485,87 @@ window.onload = function () {
         bsballhTotalEl.innerHTML = '';
         document.querySelector('#bsballh-breakdown').innerHTML = '';
         document.querySelector('#bsballh-textarea-btn-cont').style.display = 'none';
-        document.getElementById('bsballh-matchup').textContent = '';
+        document.getElementById('bsballh-breakdown-wrap').style.display = 'none';
     });
-    bsballhCopyBtn.addEventListener('click',  () => copyBreakdown('#bsballh-breakdown'));
-    bsballhHeaderEl.addEventListener('click', () => toggleSection('#content-bsballh'));
-    // ── MLB Hitter — Auto-fill from MLB Stats API ─────────────────
-    // Data source: statsapi.mlb.com/api/v1 (official, free, no auth).
-    // Flow: name → player ID → hitting game log → match date → fields.
-    const MLB_API           = 'https://statsapi.mlb.com/api/v1';
-    const bsballhFetchBtn    = document.querySelector('#bsballh-fetch-btn');
-    const bsballhDateInput   = document.querySelector('#bsballh-date');
-    const bsballhFetchMsg    = document.querySelector('#bsballh-fetch-msg');
+    bsballhCopyBtn.addEventListener('click', () => copyBreakdown('#bsballh-breakdown'));
+
+    // ── Name Search mode (fully independent — own fields, own breakdown) ──
+    const bsballhFetchBtn     = document.querySelector('#bsballh-fetch-btn');
+    const bsballhDateInput    = document.querySelector('#bsballh-date');
+    const bsballhNsPlayerName = document.querySelector('#bsballh-ns-player-name');
+    const bsballhNsFetchMsg   = document.querySelector('#bsballh-ns-fetch-msg');
+    const bsballhNsMatchup    = document.querySelector('#bsballh-ns-matchup');
+    const bsballhNsInputs = document.querySelectorAll('.bsballh-ns-fs');
+    const bsballhNsVals   = document.querySelectorAll('#bsballh-name-mode .bsballh-ns-val');
+    const bsballhNsSing = document.getElementById('bsballh-ns-sing');
+    const bsballhNsDoub = document.getElementById('bsballh-ns-doub');
+    const bsballhNsTrip = document.getElementById('bsballh-ns-trip');
+    const bsballhNsHR   = document.getElementById('bsballh-ns-hr');
+    const bsballhNsR    = document.getElementById('bsballh-ns-r');
+    const bsballhNsRBI  = document.getElementById('bsballh-ns-rbi');
+    const bsballhNsBOB  = document.getElementById('bsballh-ns-bob');
+    const bsballhNsHBP  = document.getElementById('bsballh-ns-hbp');
+    const bsballhNsSB   = document.getElementById('bsballh-ns-sb');
+    const bsballhNsTotalEl  = document.querySelector('#bsballh-ns-total-fs');
+    const bsballhNsGoBtn    = document.querySelector('#bsballh-ns-btn');
+    const bsballhNsClearBtn = document.querySelector('#bsballh-ns-clear');
+    const bsballhNsCopyBtn  = document.querySelector('#bsballh-ns-copy');
+    let   bsballhNsHzsChk   = document.querySelector('#bsballh-ns-hzs-checkbox');
+    bsballhNsGoBtn.addEventListener('click', () => {
+        const r = computeHitterFS({
+            hits: Number(bsballhNsSing.value) + Number(bsballhNsDoub.value) + Number(bsballhNsTrip.value) + Number(bsballhNsHR.value),
+            doubles: Number(bsballhNsDoub.value), triples: Number(bsballhNsTrip.value), homeRuns: Number(bsballhNsHR.value),
+            runs: Number(bsballhNsR.value), rbi: Number(bsballhNsRBI.value), baseOnBalls: Number(bsballhNsBOB.value),
+            hitByPitch: Number(bsballhNsHBP.value), stolenBases: Number(bsballhNsSB.value),
+        });
+        document.querySelector('#bsballh-ns-sing-val').innerHTML = `= ${r.singVal}`;
+        document.querySelector('#bsballh-ns-doub-val').innerHTML = `= ${r.doubVal}`;
+        document.querySelector('#bsballh-ns-trip-val').innerHTML = `= ${r.tripVal}`;
+        document.querySelector('#bsballh-ns-hr-val').innerHTML   = `= ${r.hrVal}`;
+        document.querySelector('#bsballh-ns-r-val').innerHTML    = `= ${r.rVal}`;
+        document.querySelector('#bsballh-ns-rbi-val').innerHTML  = `= ${r.rbiVal}`;
+        document.querySelector('#bsballh-ns-bob-val').innerHTML  = `= ${r.bobVal}`;
+        document.querySelector('#bsballh-ns-hbp-val').innerHTML  = `= ${r.hbpVal}`;
+        document.querySelector('#bsballh-ns-sb-val').innerHTML   = `= ${r.sbVal}`;
+        bsballhNsTotalEl.innerHTML = r.total;
+        fillEmptyInputs(bsballhNsInputs);
+        const statLines = hitterStatLines({
+            doubles: Number(bsballhNsDoub.value), triples: Number(bsballhNsTrip.value), homeRuns: Number(bsballhNsHR.value),
+            runs: Number(bsballhNsR.value), rbi: Number(bsballhNsRBI.value), baseOnBalls: Number(bsballhNsBOB.value),
+            hitByPitch: Number(bsballhNsHBP.value), stolenBases: Number(bsballhNsSB.value),
+        }, r);
+        const header = buildHeader(bsballhNsPlayerName.value);
+        const breakdown = withHeader(header, buildBreakdown(statLines, r.total));
+        showBreakdown('#bsballh-ns-breakdown', '#bsballh-ns-textarea-btn-cont', breakdown);
+        document.getElementById('bsballh-ns-breakdown-wrap').style.display = 'block';
+        bsballhNsHzsChk = setupHideZerosCheckbox(bsballhNsHzsChk, '#bsballh-ns-breakdown', statLines, bsballhNsInputs, r.total, '', header);
+    });
+    bsballhNsClearBtn.addEventListener('click', () => {
+        bsballhNsInputs.forEach(i => i.value = '');
+        bsballhNsVals.forEach(v => v.innerHTML = '');
+        bsballhNsPlayerName.value = '';
+        bsballhNsTotalEl.innerHTML = '';
+        document.querySelector('#bsballh-ns-breakdown').innerHTML = '';
+        document.querySelector('#bsballh-ns-textarea-btn-cont').style.display = 'none';
+        document.getElementById('bsballh-ns-breakdown-wrap').style.display = 'none';
+        bsballhNsMatchup.textContent = '';
+        bsballhNsFetchMsg.textContent = '';
+    });
+    bsballhNsCopyBtn.addEventListener('click', () => copyBreakdown('#bsballh-ns-breakdown'));
+
     function setHitterFetchMsg(msg, type = '') {
-        bsballhFetchMsg.textContent = msg;
-        bsballhFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
-    }
-    /** Resolve a player name to their MLB person record for a given season. */
-    async function resolveMlbPlayer(name, season) {
-        const res = await fetch(`${MLB_API}/sports/1/players?season=${season}`);
-        if (!res.ok) throw new Error('player list request failed');
-        const data = await res.json();
-        const target = name.trim().toLowerCase();
-        const people = data.people || [];
-        // Prefer exact full-name match, then a partial contains match
-        return people.find(p => p.fullName.toLowerCase() === target)
-            || people.find(p => p.fullName.toLowerCase().includes(target))
-            || null;
-    }
-    // ── MLB Drill-down (Date → League → Game → Team → Player) ──────
-    // Shared by Hitter and Pitcher cards. `applyStats(statsObj)` is
-    // caller-defined and writes the card-specific fields.
-    function initMlbDrillDown({ prefix, statCategory, goBtn, applyStats, startersOnly = false }) {
-        const dateInput    = document.querySelector(`#${prefix}-date`);
-        const loadGamesBtn = document.querySelector(`#${prefix}-load-games-btn`);
-        const gameRow      = document.querySelector(`#${prefix}-game-row`);
-        const gameSelect   = document.querySelector(`#${prefix}-game-select`);
-        const teamRow      = document.querySelector(`#${prefix}-team-row`);
-        const teamSelect   = document.querySelector(`#${prefix}-team-select`);
-        const playerRow    = document.querySelector(`#${prefix}-player-row`);
-        const playerSelect = document.querySelector(`#${prefix}-player-select`);
-        const fetchMsg     = document.querySelector(`#${prefix}-fetch-msg`);
-        const matchup      = document.querySelector(`#${prefix}-matchup`);
-
-        function setMsg(msg, type = '') {
-            fetchMsg.textContent = msg;
-            fetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
-        }
-
-        let gamesCache = {};    // gamePk -> game object (from schedule)
-        let boxscoreCache = {}; // gamePk -> boxscore.teams object
-
-        function getSelectedSportId() {
-            return document.querySelector(`input[name="${prefix}-league"]:checked`)?.value || '1';
-        }
-
-        async function loadGames() {
-            const date = dateInput.value;
-            if (!date) { setMsg('Pick a date first.', 'error'); return; }
-
-            const sportId = getSelectedSportId();
-            loadGamesBtn.disabled = true;
-            gameRow.style.display = 'none';
-            teamRow.style.display = 'none';
-            playerRow.style.display = 'none';
-            gameSelect.innerHTML = '';
-            teamSelect.innerHTML = '';
-            playerSelect.innerHTML = '';
-            setMsg('Loading games…', 'loading');
-
-            try {
-                const res = await fetch(`${MLB_API}/schedule?sportId=${sportId}&date=${date}`);
-                if (!res.ok) throw new Error('schedule request failed');
-                const data = await res.json();
-                const games = data.dates?.[0]?.games || [];
-                gamesCache = {};
-                games.forEach(g => { gamesCache[g.gamePk] = g; });
-
-                if (games.length === 0) {
-                    setMsg(`No games found on ${date}.`, 'error');
-                    return;
-                }
-
-                gameSelect.innerHTML = '<option value="">Select a game…</option>' +
-                    games.map(g => {
-                        const dhSuffix = g.doubleHeader !== 'N' ? ` (Game ${g.gameNumber})` : '';
-                        return `<option value="${g.gamePk}">${g.teams.away.team.name} @ ${g.teams.home.team.name}${dhSuffix}</option>`;
-                    }).join('');
-                gameRow.style.display = 'flex';
-                setMsg(`Found ${games.length} game(s) on ${date}.`, 'success');
-            } catch (err) {
-                setMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
-            } finally {
-                loadGamesBtn.disabled = false;
-            }
-        }
-        loadGamesBtn.addEventListener('click', loadGames);
-
-        gameSelect.addEventListener('change', () => {
-            const gamePk = gameSelect.value;
-            teamSelect.innerHTML = '';
-            playerSelect.innerHTML = '';
-            teamRow.style.display = 'none';
-            playerRow.style.display = 'none';
-            if (!gamePk || !gamesCache[gamePk]) return;
-
-            const g = gamesCache[gamePk];
-            teamSelect.innerHTML = '<option value="">Select a team…</option>' +
-                `<option value="away">${g.teams.away.team.name}</option>` +
-                `<option value="home">${g.teams.home.team.name}</option>`;
-            teamRow.style.display = 'flex';
-        });
-
-        async function fetchBoxscore(gamePk) {
-            if (boxscoreCache[gamePk]) return boxscoreCache[gamePk];
-            const res = await fetch(`${MLB_API}/game/${gamePk}/boxscore`);
-            if (!res.ok) throw new Error('boxscore request failed');
-            const data = await res.json();
-            boxscoreCache[gamePk] = data.teams || {};
-            return boxscoreCache[gamePk];
-        }
-
-        teamSelect.addEventListener('change', async () => {
-            const gamePk   = gameSelect.value;
-            const homeAway = teamSelect.value;
-            playerSelect.innerHTML = '';
-            playerRow.style.display = 'none';
-            if (!gamePk || !homeAway) return;
-
-            setMsg('Loading roster…', 'loading');
-            try {
-                const teams   = await fetchBoxscore(gamePk);
-                const players = Object.values(teams[homeAway]?.players || {});
-                const active  = players.filter(p => {
-                    const hasStats = Object.keys(p.stats?.[statCategory] || {}).length > 0;
-                    if (!hasStats) return false;
-                    // MLB's battingOrder ends in "00" for the original starter in that
-                    // lineup slot; any other suffix means they entered as a substitute
-                    // (pinch hitter, defensive replacement, etc.) — DNP-ineligible
-                    // regardless of plate appearances, per league rule.
-                    if (startersOnly) return p.battingOrder?.endsWith('00');
-                    return true;
-                });
-
-                if (active.length === 0) {
-                    const noun = statCategory === 'pitching' ? 'pitchers' : (startersOnly ? 'starting batters' : 'batters');
-                    setMsg(`No ${noun} with stats found for that team.`, 'error');
-                    return;
-                }
-
-                playerSelect.innerHTML = '<option value="">Select a player…</option>' +
-                    active.map(p => `<option value="${p.person.id}">${p.person.fullName} (${p.position.abbreviation})</option>`).join('');
-                playerRow.style.display = 'flex';
-                setMsg('Pick a player to load their stats.', '');
-            } catch (err) {
-                setMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
-            }
-        });
-
-        playerSelect.addEventListener('change', () => {
-            const gamePk    = gameSelect.value;
-            const homeAway  = teamSelect.value;
-            const athleteId = playerSelect.value;
-            if (!gamePk || !homeAway || !athleteId) return;
-
-            const teams   = boxscoreCache[gamePk] || {};
-            const players = Object.values(teams[homeAway]?.players || {});
-            const entry   = players.find(p => String(p.person.id) === athleteId);
-            if (!entry) { setMsg("Could not find that player's stats.", 'error'); return; }
-
-            const statsObj = entry.stats[statCategory] || {};
-            document.getElementById(`${prefix}-player-name`).value = entry.person.fullName;
-            applyStats(statsObj);
-
-            const g   = gamesCache[gamePk];
-            const opp = homeAway === 'away' ? g?.teams.home.team.name : g?.teams.away.team.name;
-            matchup.textContent = opp ? `vs ${opp}` : '';
-
-            setMsg(`Loaded ${entry.person.fullName}.`, 'success');
-            goBtn.click(); // auto-calculate
-        });
+        bsballhNsFetchMsg.textContent = msg;
+        bsballhNsFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
     }
     async function fetchMlbHitterStats() {
-        const name = document.getElementById('bsballh-player-name').value.trim();
-        const date = bsballhDateInput.value; // YYYY-MM-DD
+        const name = bsballhNsPlayerName.value.trim();
+        const date = bsballhDateInput.value;
         if (!name) { setHitterFetchMsg('Enter a player name first.', 'error'); return; }
         if (!date) { setHitterFetchMsg('Pick a date first.', 'error'); return; }
         const season = date.slice(0, 4);
         bsballhFetchBtn.disabled = true;
         setHitterFetchMsg('Looking up player…', 'loading');
-        bsballhMatchup.textContent = '';
+        bsballhNsMatchup.textContent = '';
         try {
             const player = await resolveMlbPlayer(name, season);
             if (!player) {
@@ -882,7 +1582,6 @@ window.onload = function () {
                 setHitterFetchMsg(`${player.fullName} has no hitting log on ${date}.`, 'error');
                 return;
             }
-            // Aggregate (sums doubleheaders into one entry)
             const agg = games.reduce((a, g) => {
                 const s = g.stat || {};
                 a.hits     += s.hits        || 0;
@@ -897,26 +1596,24 @@ window.onload = function () {
                 return a;
             }, { hits:0, doubles:0, triples:0, homeRuns:0, runs:0, rbi:0, bb:0, hbp:0, sb:0 });
             const singles = Math.max(0, agg.hits - agg.doubles - agg.triples - agg.homeRuns);
-            // Populate the hitter fields
-            bsballhSing.value = singles;
-            bsballhDoub.value = agg.doubles;
-            bsballhTrip.value = agg.triples;
-            bsballhHR.value   = agg.homeRuns;
-            bsballhR.value    = agg.runs;
-            bsballhRBI.value  = agg.rbi;
-            bsballhBOB.value  = agg.bb;
-            bsballhHBP.value  = agg.hbp;
-            bsballhSB.value   = agg.sb;
+            bsballhNsSing.value = singles;
+            bsballhNsDoub.value = agg.doubles;
+            bsballhNsTrip.value = agg.triples;
+            bsballhNsHR.value   = agg.homeRuns;
+            bsballhNsR.value    = agg.runs;
+            bsballhNsRBI.value  = agg.rbi;
+            bsballhNsBOB.value  = agg.bb;
+            bsballhNsHBP.value  = agg.hbp;
+            bsballhNsSB.value   = agg.sb;
             const dhNote = games.length > 1 ? ` (${games.length} games combined)` : '';
             setHitterFetchMsg(`Loaded ${player.fullName} — ${date}${dhNote}.`, 'success');
             const g0       = games[0];
             const teamName = g0.team?.name || '';
             const oppName  = g0.opponent?.name || '';
             if (teamName && oppName) {
-                bsballhMatchup.textContent = `${teamName} vs ${oppName}`;
+                bsballhNsMatchup.textContent = `${teamName} vs ${oppName}`;
             }
-            // Auto-calculate
-            bsballhGoBtn.click();
+            bsballhNsGoBtn.click(); // auto-calculate
         } catch (err) {
             setHitterFetchMsg(
                 'Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message,
@@ -927,24 +1624,8 @@ window.onload = function () {
         }
     }
     bsballhFetchBtn.addEventListener('click', fetchMlbHitterStats);
-    initMlbDrillDown({
-        prefix: 'bsballh',
-        statCategory: 'batting',
-        goBtn: bsballhGoBtn,
-        startersOnly: true,
-        applyStats(s) {
-            const singles = Math.max(0, (s.hits || 0) - (s.doubles || 0) - (s.triples || 0) - (s.homeRuns || 0));
-            bsballhSing.value = singles;
-            bsballhDoub.value = s.doubles || 0;
-            bsballhTrip.value = s.triples || 0;
-            bsballhHR.value   = s.homeRuns || 0;
-            bsballhR.value    = s.runs || 0;
-            bsballhRBI.value  = s.rbi || 0;
-            bsballhBOB.value  = s.baseOnBalls || 0;
-            bsballhHBP.value  = s.hitByPitch || 0;
-            bsballhSB.value   = s.stolenBases || 0;
-        }
-    });
+
+    initMlbTeamTable({ prefix: 'bsballh', statCategory: 'batting', computeFS: computeHitterFS, buildStatLines: hitterStatLines });
     // ========================================================
     //  TENNIS
     // ========================================================
