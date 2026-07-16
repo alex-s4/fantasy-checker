@@ -2175,6 +2175,714 @@ window.onload = function () {
         fballoGoBtn.click(); // auto-calculate
     });
 
+    // ── NFL Offensive — Mode toggle (Gamebook / Player Search / Manual) ──
+    // Name Search is a planned follow-up; only these 3 exist today.
+    document.querySelectorAll('.fballo-mode-radio').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const isGamebook = document.getElementById('fballo-mode-gamebook').checked;
+            const isSearch   = document.getElementById('fballo-mode-search').checked;
+            const isManual   = !isGamebook && !isSearch;
+            document.getElementById('fballo-gamebook-mode').style.display = isGamebook ? 'block' : 'none';
+            document.getElementById('fballo-search-mode').style.display   = isSearch   ? 'block' : 'none';
+            document.getElementById('fballo-manual-mode').style.display   = isManual   ? 'block' : 'none';
+        });
+    });
+
+    // ── NFL Offensive — Manual mode (independent stat-input set) ──
+    const fballoManTotalEl  = document.querySelector('#fballo-man-total-fs');
+    const fballoManGoBtn    = document.querySelector('#fballo-man-btn');
+    const fballoManClearBtn = document.querySelector('#fballo-man-clear');
+    const fballoManCopyBtn  = document.querySelector('#fballo-man-copy');
+    let   fballoManHzsChk   = document.querySelector('#fballo-man-hzs-checkbox');
+    const fballoManInputs = document.querySelectorAll('.fballo-man-fs');
+    const fballoManVals   = document.querySelectorAll('#fballo-manual-mode .fballo-val');
+    const fballoManPassYd  = document.getElementById('fballo-man-passyd');
+    const fballoManPassTD  = document.getElementById('fballo-man-passtd');
+    const fballoManInt     = document.getElementById('fballo-man-int');
+    const fballoManRushYd  = document.getElementById('fballo-man-rushyd');
+    const fballoManRushTD  = document.getElementById('fballo-man-rushtd');
+    const fballoManRecYd   = document.getElementById('fballo-man-recyd');
+    const fballoManRecTD   = document.getElementById('fballo-man-rectd');
+    const fballoManRec     = document.getElementById('fballo-man-rec');
+    const fballoManFL      = document.getElementById('fballo-man-fl');
+    const fballoMan2Ptc    = document.getElementById('fballo-man-2ptc');
+    const fballoManOFRT    = document.getElementById('fballo-man-ofrt');
+    const fballoManKPFGRTD = document.getElementById('fballo-man-kpfgrtd');
+    fballoManGoBtn.addEventListener('click', () => {
+        const passYdVal  = Number((Number(fballoManPassYd.value)  * 0.04).toFixed(2));
+        const passTDVal  = Number(fballoManPassTD.value)  * 4;
+        const intVal     = Number(fballoManInt.value)     * -1;
+        const rushYdVal  = Number((Number(fballoManRushYd.value)  * 0.1).toFixed(1));
+        const rushTDVal  = Number(fballoManRushTD.value)  * 6;
+        const recYdVal   = Number((Number(fballoManRecYd.value)   * 0.1).toFixed(1));
+        const recTDVal   = Number(fballoManRecTD.value)   * 6;
+        const recVal     = Number(fballoManRec.value);
+        const flVal      = Number(fballoManFL.value)      * -1;
+        const twoPtcVal  = Number(fballoMan2Ptc.value)    * 2;
+        const ofrtVal    = Number(fballoManOFRT.value)    * 6;
+        const kpfgrtdVal = Number(fballoManKPFGRTD.value) * 6;
+        const total = Number((
+            passYdVal + passTDVal + intVal +
+            rushYdVal + rushTDVal +
+            recYdVal  + recTDVal  + recVal +
+            flVal + twoPtcVal + ofrtVal + kpfgrtdVal
+        ).toFixed(2));
+        document.querySelector('#fballo-man-passyd-val').innerHTML   = `= ${passYdVal}`;
+        document.querySelector('#fballo-man-passtd-val').innerHTML   = `= ${passTDVal}`;
+        document.querySelector('#fballo-man-int-val').innerHTML      = `= ${intVal}`;
+        document.querySelector('#fballo-man-rushyd-val').innerHTML   = `= ${rushYdVal}`;
+        document.querySelector('#fballo-man-rushtd-val').innerHTML   = `= ${rushTDVal}`;
+        document.querySelector('#fballo-man-recyd-val').innerHTML    = `= ${recYdVal}`;
+        document.querySelector('#fballo-man-rectd-val').innerHTML    = `= ${recTDVal}`;
+        document.querySelector('#fballo-man-rec-val').innerHTML      = `= ${recVal}`;
+        document.querySelector('#fballo-man-fl-val').innerHTML       = `= ${flVal}`;
+        document.querySelector('#fballo-man-2ptc-val').innerHTML     = `= ${twoPtcVal}`;
+        document.querySelector('#fballo-man-ofrt-val').innerHTML     = `= ${ofrtVal}`;
+        document.querySelector('#fballo-man-kpfgrtd-val').innerHTML  = `= ${kpfgrtdVal}`;
+        fballoManTotalEl.innerHTML = total;
+        fillEmptyInputs(fballoManInputs);
+        const statLines = [
+            `Passing Yards: 0.04 pts/yard (${fballoManPassYd.value}) = ${passYdVal}`,
+            `Passing TDs: 4 pts (${fballoManPassTD.value}) = ${passTDVal}`,
+            `Interceptions: -1 pt (${fballoManInt.value}) = ${intVal}`,
+            `Rushing Yards: 0.1 pts/yard (${fballoManRushYd.value}) = ${rushYdVal}`,
+            `Rushing TDs: 6 pts (${fballoManRushTD.value}) = ${rushTDVal}`,
+            `Receiving Yards: 0.1 pts/yard (${fballoManRecYd.value}) = ${recYdVal}`,
+            `Receiving TDs: 6 pts (${fballoManRecTD.value}) = ${recTDVal}`,
+            `Receptions: 1 pt (${fballoManRec.value}) = ${recVal}`,
+            `Fumbles Lost: -1 pt (${fballoManFL.value}) = ${flVal}`,
+            `2 Point Conversions: 2 pts (${fballoMan2Ptc.value}) = ${twoPtcVal}`,
+            `Offensive Fumble Recovery Touchdown: 6 pts (${fballoManOFRT.value}) = ${ofrtVal}`,
+            `Kick/Punt/Field Goal Return Touchdown: 6 pts (${fballoManKPFGRTD.value}) = ${kpfgrtdVal}`,
+        ];
+        const fballoManHeader = buildHeader(document.getElementById('fballo-man-player-name').value);
+        const fballoManBreakdown = withHeader(fballoManHeader, buildBreakdown(statLines, total));
+        showBreakdown('#fballo-man-breakdown', '#fballo-man-textarea-btn-cont', fballoManBreakdown);
+        fballoManHzsChk = setupHideZerosCheckbox(fballoManHzsChk, '#fballo-man-breakdown', statLines, fballoManInputs, total, '', fballoManHeader);
+    });
+    fballoManClearBtn.addEventListener('click', () => {
+        fballoManInputs.forEach(i => i.value = '');
+        fballoManVals.forEach(v => v.innerHTML = '');
+        document.getElementById('fballo-man-player-name').value = '';
+        fballoManTotalEl.innerHTML = '';
+        document.querySelector('#fballo-man-breakdown').innerHTML = '';
+        document.querySelector('#fballo-man-textarea-btn-cont').style.display = 'none';
+    });
+    fballoManCopyBtn.addEventListener('click', () => copyBreakdown('#fballo-man-breakdown'));
+
+    // ============================================================
+    //  NFL Offensive — Upload Gamebook mode
+    //
+    //  Parses the official NFL Game Summary PDF client-side via pdf.js.
+    //  Unlike the NBA/WNBA Game Book, the NFL PDF has no single fixed
+    //  column layout — each period section (Final Individual Statistics
+    //  = Full Game, First Half Summary = 1H, Second Half Summary = 2H,
+    //  Overtime Summary = OT) prints separate RUSHING / PASSING / PASS
+    //  RECEIVING / FUMBLES tables, two teams side-by-side per line.
+    //  "Second Half Summary" and "Overtime Summary" only appear in
+    //  gamebooks that actually went to OT — for a normal game, 2H is
+    //  computed as Full Game minus 1H instead (confirmed against real
+    //  PDFs: 2H-section totals, when present, already exclude OT, so
+    //  Full Game = 1H + 2H + OT holds either way).
+    //
+    //  2-Pt Conversions, Offensive Fumble Recovery TD, and Kick/Punt/FG
+    //  Return TD are auto-filled (Full Game only) from the gamebook's
+    //  "Player Scoring Information" table. That table's column meaning
+    //  isn't documented anywhere in the PDF — it was reverse-engineered
+    //  from known plays (a rushing TD, a kick-return TD, a punt-return
+    //  TD, a fumble-recovery TD, and a 2pt reception) across 4 real
+    //  gamebooks. As a safety net against a wrong column guess, each
+    //  row's own Points column is recomputed from the raw values and
+    //  compared — a mismatch is surfaced as a "⚠ Check" flag rather
+    //  than silently producing a wrong 2PT/OFRT/KPFGRTD number.
+    // ============================================================
+    const FBALLOGB_STAT_KEYS = {
+        rushing:   ['att', 'yds', 'avg', 'lg', 'td'],
+        passing:   ['att', 'cmp', 'yds', 'sackYd', 'td', 'lg', 'int', 'rt'],
+        receiving: ['tar', 'rec', 'yds', 'avg', 'lg', 'td'],
+        fumbles:   ['fum', 'lost', 'ownRec', 'ownRecYds', 'ownRecTd', 'forced', 'oppRec', 'oppRecYds', 'oppRecTd', 'outBds'],
+    };
+    // Player Scoring Information — 14 numeric columns, position confirmed
+    // (see comment block above) except tdFgReturn / twoPtRush which are
+    // inferred by elimination (always 0 in every sample seen so far).
+    const FBALLOGB_SCORING_KEYS = ['tdFgReturn', 'tdRush', 'tdRec', 'tdKo', 'tdPunt', 'tdInt', 'tdFum', 'tdMisc', 'fg', 'xp', 'twoPtRush', 'twoPtRec', 'sfty', 'points'];
+
+    function fballoGbReconstructRows(items, yTolerance = 2.5) {
+        const rows = [];
+        items.forEach(item => {
+            const y = item.transform[5];
+            let row = rows.find(r => Math.abs(r.y - y) <= yTolerance);
+            if (!row) { row = { y, items: [] }; rows.push(row); }
+            row.items.push(item);
+        });
+        rows.sort((a, b) => b.y - a.y);
+        rows.forEach(r => r.items.sort((a, b) => a.transform[4] - b.transform[4]));
+        return rows
+            .map(r => r.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+    }
+    async function fballoGbExtractPageLines(page) {
+        const content = await page.getTextContent();
+        return fballoGbReconstructRows(content.items);
+    }
+
+    /** Extract every "Name  n1 n2 ... nK" occurrence on/after a category header line, stopping at the next table boundary. Handles 1 or 2 teams per line automatically. */
+    function fballoGbExtractCategoryRows(lines, headerRegex, n) {
+        const startIdx = lines.findIndex(l => headerRegex.test(l));
+        if (startIdx === -1) return null; // section/category not found at all
+        const numGroup = `(?:-?[\\d./]+\\s+){${n - 1}}-?[\\d./]+`;
+        const re = new RegExp(`([A-Z][A-Za-z'.\\-]*(?:\\s[A-Z][A-Za-z'.\\-]*)?)\\s+(${numGroup})(?=\\s|$)`, 'g');
+        const BOUNDARY_RE = /^(RUSHING |PASSING |PASS RECEIVING|FUMBLES|INTERCEPTIONS|PUNTING|PUNT RETURNS|KICKOFF RETURNS|TKL |Final Individual|Final Team|First Half Summary|Second Half Summary|Overtime Summary|Ball Possession|Miscellaneous|Touchdown Scoring|Ten Longest|Playtime Percentage)/;
+        const out = [];
+        for (let i = startIdx + 1; i < lines.length; i++) {
+            if (BOUNDARY_RE.test(lines[i])) break;
+            let m;
+            re.lastIndex = 0;
+            while ((m = re.exec(lines[i]))) {
+                const name = m[1].trim();
+                if (name === 'Total') continue;
+                const nums = m[2].trim().split(/\s+/).map(tok => tok.includes('/') ? tok : Number(tok));
+                out.push({ name, nums });
+            }
+        }
+        return out;
+    }
+
+    /** Build { name: {statObj} } for one category, given its column-key list. */
+    function fballoGbCategoryMap(lines, headerRegex, keys) {
+        const rows = fballoGbExtractCategoryRows(lines, headerRegex, keys.length);
+        const map = {};
+        if (!rows) return map;
+        rows.forEach(r => {
+            const stats = {};
+            keys.forEach((k, i) => { stats[k] = r.nums[i]; });
+            // A player can legitimately appear twice in the same category in
+            // rare cases (shouldn't normally happen) — last occurrence wins.
+            map[r.name] = stats;
+        });
+        return map;
+    }
+
+    /** Parse the "Player Scoring Information" table (Full Game only). Returns { name: {2ptc, ofrt, kpfgrtd, warn} }. */
+    function fballoGbParseScoringInfo(lines) {
+        const startIdx = lines.findIndex(l => /^Club Player/.test(l) || /^Player Scoring Information/.test(l));
+        const result = {};
+        if (startIdx === -1) return result;
+        const numGroup = `(?:-?[\\d.]+\\s+){13}-?[\\d.]+`; // 14 numeric columns
+        const re = new RegExp(`^[A-Z]{2,4}\\s+([A-Z][A-Za-z'.\\-]*(?:\\s[A-Z][A-Za-z'.\\-]*)?)\\s+(${numGroup})$`);
+        for (let i = startIdx + 1; i < lines.length; i++) {
+            if (/^Possession Detail/.test(lines[i])) break;
+            const m = lines[i].match(re);
+            if (!m) continue;
+            const name = m[1].trim();
+            const nums = m[2].trim().split(/\s+/).map(Number);
+            const s = {};
+            FBALLOGB_SCORING_KEYS.forEach((k, idx) => { s[k] = nums[idx]; });
+
+            const impliedPoints = (s.tdFgReturn + s.tdRush + s.tdRec + s.tdKo + s.tdPunt + s.tdInt + s.tdFum + s.tdMisc) * 6
+                + s.fg * 3 + s.xp * 1 + (s.twoPtRush + s.twoPtRec) * 2 + s.sfty * 2;
+
+            result[name] = {
+                twoPtc:   s.twoPtRush + s.twoPtRec,
+                ofrt:     s.tdFum,
+                kpfgrtd:  s.tdFgReturn + s.tdKo + s.tdPunt,
+                warn: impliedPoints !== s.points
+                    ? `Player Scoring Information row didn't reconcile (implied ${impliedPoints} vs printed ${s.points} pts) — verify 2PT/OFRT/KPFGRTD by hand.`
+                    : null,
+            };
+        }
+        return result;
+    }
+
+    /** Identify VISITOR/HOME team names from a "VISITOR: Team" / "HOME: Team" pair anywhere on the page. */
+    function fballoGbDetectTeams(lines) {
+        let visitor = null, home = null;
+        lines.forEach(l => {
+            const v = l.match(/^VISITOR:\s*(.+?)\s+\d/) || l.match(/^VISITOR:\s*(.+)$/);
+            const h = l.match(/^HOME:\s*(.+?)\s+\d/)    || l.match(/^HOME:\s*(.+)$/);
+            if (v && !visitor) visitor = v[1].trim();
+            if (h && !home)    home    = h[1].trim();
+        });
+        return { visitor, home };
+    }
+
+    /** Parse one period section's lines into { team: { rushing:{name:stats}, passing:{...}, receiving:{...}, fumbles:{...} } }. Two-team tables are name-attributed by matching against the team's own roster names collected from the lineup page (rosterByTeam), falling back to a simple even/odd split when rosters aren't available. */
+    function fballoGbParseSectionTeams(lines, teamNames, rosterByTeam) {
+        const rushingRows   = fballoGbExtractCategoryRows(lines, /^RUSHING /, FBALLOGB_STAT_KEYS.rushing.length) || [];
+        const passingRows   = fballoGbExtractCategoryRows(lines, /^PASSING /, FBALLOGB_STAT_KEYS.passing.length) || [];
+        const receivingRows = fballoGbExtractCategoryRows(lines, /^PASS RECEIVING /, FBALLOGB_STAT_KEYS.receiving.length) || [];
+        const fumblesRows   = fballoGbExtractCategoryRows(lines, /^FUMBLES /, FBALLOGB_STAT_KEYS.fumbles.length) || [];
+
+        const teams = {};
+        teamNames.forEach(t => { teams[t] = { rushing: {}, passing: {}, receiving: {}, fumbles: {} }; });
+
+        function assign(rows, keys, category) {
+            rows.forEach(r => {
+                const stats = {};
+                keys.forEach((k, i) => { stats[k] = r.nums[i]; });
+                // Attribute to whichever team's roster contains this name; if
+                // rosters aren't available yet (shouldn't normally happen since
+                // Lineups is always page 1), default to the first team so the
+                // stat isn't silently dropped.
+                let team = teamNames.find(t => rosterByTeam[t] && rosterByTeam[t].has(r.name)) || teamNames[0];
+                teams[team][category][r.name] = stats;
+            });
+        }
+        assign(rushingRows,   FBALLOGB_STAT_KEYS.rushing,   'rushing');
+        assign(passingRows,   FBALLOGB_STAT_KEYS.passing,   'passing');
+        assign(receivingRows, FBALLOGB_STAT_KEYS.receiving, 'receiving');
+        assign(fumblesRows,   FBALLOGB_STAT_KEYS.fumbles,   'fumbles');
+        return teams;
+    }
+
+    /** Parse the Lineups page: starters (4 "POS# Name" groups per row: TeamA-Off, TeamA-Def, TeamB-Off, TeamB-Def) plus best-effort Substitutions/DNP lists. Returns { team: { starters:Set, subNames:Set, dnpNames:Set } }. */
+    const FBALLOGB_OFFENSE_POS = new Set(['QB','RB','FB','WR','TE','T','G','C','LT','RT','LG','RG','OL']);
+    function fballoGbParseLineups(lines, teamNames) {
+        const roster = {};
+        teamNames.forEach(t => { roster[t] = { starters: new Set(), subNames: new Set(), dnpNames: new Set() }; });
+
+        const linIdx = lines.findIndex(l => l === 'Lineups');
+        if (linIdx === -1) return roster;
+
+        // Name must look like "F.Lastname" (single initial + period), which is
+        // this PDF's consistent player-name format — filters out cases where
+        // a malformed line causes a stray position tag to look like a name.
+        const posNameRe = /([A-Z]{1,4}(?:\/[A-Z]{1,4})?)\s+(\d{1,2})\s+([A-Z]\.[A-Za-z'\-]+)/g;
+
+        // Starters: 4 matches per row, in fixed order TeamA-Off, TeamA-Def, TeamB-Off, TeamB-Def.
+        let i = linIdx + 1;
+        // Skip the "TeamA TeamB" and "Offense Defense Offense Defense" header lines.
+        while (i < lines.length && !/^Substitutions/.test(lines[i]) && i < linIdx + 30) {
+            const matches = [...lines[i].matchAll(posNameRe)];
+            if (matches.length >= 2) {
+                // Assign in groups of up to 4, alternating team A / team B every 2 (Off,Def).
+                matches.forEach((m, idx) => {
+                    const pos = m[1];
+                    const team = idx < Math.ceil(matches.length / 2) ? teamNames[0] : teamNames[1];
+                    if (FBALLOGB_OFFENSE_POS.has(pos.split('/')[0])) roster[team].starters.add(m[3]);
+                });
+            }
+            i++;
+        }
+
+        // Substitutions / Did Not Play / Not Active: best-effort scan. These
+        // wrap across lines with both teams' comma-lists interleaved per
+        // visual row, so team attribution can occasionally miss a name split
+        // right at a line wrap — acceptable for a roster-completeness display
+        // (it never affects any player who actually has stats, since those
+        // come from the category tables above, not from this list).
+        const section = lines.slice(i, lines.length);
+        const subStart = section.findIndex(l => /^Substitutions/.test(l));
+        const dnpStart = section.findIndex(l => /^Did Not Play/.test(l));
+        const naStart  = section.findIndex(l => /^Not Active/.test(l));
+        function scanRange(from, to, targetSetName) {
+            if (from === -1) return;
+            const end = to === -1 ? section.length : to;
+            for (let j = from + 1; j < end; j++) {
+                const matches = [...section[j].matchAll(posNameRe)];
+                const half = Math.ceil(matches.length / 2);
+                matches.forEach((m, idx) => {
+                    if (!FBALLOGB_OFFENSE_POS.has(m[1].split('/')[0])) return;
+                    const team = idx < half ? teamNames[0] : teamNames[1];
+                    roster[team][targetSetName].add(m[3]);
+                });
+            }
+        }
+        scanRange(subStart, dnpStart !== -1 ? dnpStart : naStart, 'subNames');
+        scanRange(dnpStart, naStart, 'dnpNames');
+        return roster;
+    }
+
+    /** Fantasy score for one player's raw stats across rushing/passing/receiving/fumbles + optional scoring-info extras. */
+    function fballoGbFsFromStats(rushing, passing, receiving, fumbles, extras) {
+        const passYd = passing?.yds || 0, passTd = passing?.td || 0, int = passing?.int || 0;
+        const rushYd = rushing?.yds || 0, rushTd = rushing?.td || 0;
+        const recYd  = receiving?.yds || 0, recTd = receiving?.td || 0, rec = receiving?.rec || 0;
+        const fumLost = fumbles?.lost || 0;
+        const twoPtc = extras?.twoPtc || 0, ofrt = extras?.ofrt || 0, kpfgrtd = extras?.kpfgrtd || 0;
+        return Number((
+            passYd * 0.04 + passTd * 4 - int * 1 +
+            rushYd * 0.1  + rushTd * 6 +
+            recYd  * 0.1  + recTd  * 6 + rec * 1 -
+            fumLost * 1 + twoPtc * 2 + ofrt * 6 + kpfgrtd * 6
+        ).toFixed(2));
+    }
+
+    /** Sum raw category stats across sections (used for 2H+OT when a game went to OT, and for Full Game-minus-1H fallback when no explicit Second Half section exists). */
+    function fballoGbSumCat(list) {
+        const valid = list.filter(Boolean);
+        if (valid.length === 0) return null;
+        const keys = Object.keys(valid[0]);
+        const sum = {};
+        keys.forEach(k => {
+            if (typeof valid[0][k] !== 'number') { sum[k] = valid[0][k]; return; } // e.g. sackYd string, just carry first
+            sum[k] = valid.reduce((acc, s) => acc + (s[k] || 0), 0);
+        });
+        return sum;
+    }
+    function fballoGbDiffCat(full, half) {
+        if (!full) return null;
+        if (!half) return full;
+        const keys = Object.keys(full);
+        const diff = {};
+        keys.forEach(k => {
+            if (typeof full[k] !== 'number') { diff[k] = full[k]; return; }
+            diff[k] = Number((full[k] - (half[k] || 0)).toFixed(1));
+        });
+        return diff;
+    }
+
+    /** Top-level: parse an uploaded NFL Game Summary PDF into the per-player, per-team, per-category table. */
+    async function fballoGbParsePdf(arrayBuffer) {
+        const doc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pageLines = [];
+        for (let i = 1; i <= doc.numPages; i++) {
+            const page = await doc.getPage(i);
+            pageLines.push(await fballoGbExtractPageLines(page));
+        }
+        const allLines = pageLines.flat();
+
+        const { visitor, home } = fballoGbDetectTeams(allLines);
+        if (!visitor || !home) throw new Error("Couldn't find VISITOR/HOME team names — is this an NFL Game Summary PDF?");
+        const teamNames = [visitor, home];
+
+        const roster = fballoGbParseLineups(allLines, teamNames);
+        const rosterByTeam = {};
+        teamNames.forEach(t => { rosterByTeam[t] = new Set([...roster[t].starters, ...roster[t].subNames, ...roster[t].dnpNames]); });
+
+        const sectionPage = {
+            'Full Game': pageLines.find(lns => lns.some(l => l.includes('Final Individual Statistics'))),
+            '1H':        pageLines.find(lns => lns.some(l => l.includes('First Half Summary'))),
+            '2H':        pageLines.find(lns => lns.some(l => l.includes('Second Half Summary'))),
+            'OT':        pageLines.find(lns => lns.some(l => l.includes('Overtime Summary'))),
+        };
+        const foundSections = Object.keys(sectionPage).filter(k => sectionPage[k]);
+        if (!sectionPage['Full Game']) throw new Error("Couldn't find the 'Final Individual Statistics' section — is this an NFL Game Summary PDF?");
+
+        const sectionTeams = {};
+        Object.entries(sectionPage).forEach(([label, lns]) => {
+            if (lns) sectionTeams[label] = fballoGbParseSectionTeams(lns, teamNames, rosterByTeam);
+        });
+
+        const scoringInfo = fballoGbParseScoringInfo(pageLines.find(lns => lns.some(l => /Player Scoring Information/.test(l))) || []);
+
+        const hasOT = !!sectionTeams['OT'];
+
+        // Build one row per player per team.
+        const rows = [];
+        teamNames.forEach(team => {
+            const allNames = new Set([
+                ...roster[team].starters, ...roster[team].subNames,
+                ...Object.keys(sectionTeams['Full Game']?.[team]?.rushing || {}),
+                ...Object.keys(sectionTeams['Full Game']?.[team]?.passing || {}),
+                ...Object.keys(sectionTeams['Full Game']?.[team]?.receiving || {}),
+                ...Object.keys(sectionTeams['Full Game']?.[team]?.fumbles || {}),
+            ]);
+
+            allNames.forEach(name => {
+                const dnp = roster[team].dnpNames.has(name) && !sectionTeams['Full Game'][team].rushing[name]
+                    && !sectionTeams['Full Game'][team].passing[name] && !sectionTeams['Full Game'][team].receiving[name];
+                if (dnp) {
+                    rows.push({ team, name, dnp: true, warnings: [] });
+                    return;
+                }
+
+                const raw = {};
+                ['Full Game', '1H'].forEach(cat => {
+                    raw[cat] = {
+                        rushing:   sectionTeams[cat]?.[team]?.rushing[name]   || null,
+                        passing:   sectionTeams[cat]?.[team]?.passing[name]   || null,
+                        receiving: sectionTeams[cat]?.[team]?.receiving[name] || null,
+                        fumbles:   sectionTeams[cat]?.[team]?.fumbles[name]   || null,
+                    };
+                });
+                if (sectionTeams['2H']) {
+                    raw['2H'] = {
+                        rushing:   sectionTeams['2H']?.[team]?.rushing[name]   || null,
+                        passing:   sectionTeams['2H']?.[team]?.passing[name]   || null,
+                        receiving: sectionTeams['2H']?.[team]?.receiving[name] || null,
+                        fumbles:   sectionTeams['2H']?.[team]?.fumbles[name]   || null,
+                    };
+                } else {
+                    // Fallback: 2H = Full Game − 1H, per-category.
+                    raw['2H'] = {
+                        rushing:   fballoGbDiffCat(raw['Full Game'].rushing,   raw['1H'].rushing),
+                        passing:   fballoGbDiffCat(raw['Full Game'].passing,   raw['1H'].passing),
+                        receiving: fballoGbDiffCat(raw['Full Game'].receiving, raw['1H'].receiving),
+                        fumbles:   fballoGbDiffCat(raw['Full Game'].fumbles,   raw['1H'].fumbles),
+                    };
+                }
+                if (hasOT) {
+                    raw['OT'] = {
+                        rushing:   sectionTeams['OT']?.[team]?.rushing[name]   || null,
+                        passing:   sectionTeams['OT']?.[team]?.passing[name]   || null,
+                        receiving: sectionTeams['OT']?.[team]?.receiving[name] || null,
+                        fumbles:   sectionTeams['OT']?.[team]?.fumbles[name]   || null,
+                    };
+                    raw['2H+OT'] = {
+                        rushing:   fballoGbSumCat([raw['2H'].rushing,   raw['OT'].rushing]),
+                        passing:   fballoGbSumCat([raw['2H'].passing,   raw['OT'].passing]),
+                        receiving: fballoGbSumCat([raw['2H'].receiving, raw['OT'].receiving]),
+                        fumbles:   fballoGbSumCat([raw['2H'].fumbles,   raw['OT'].fumbles]),
+                    };
+                }
+
+                const extras = scoringInfo[name] || null;
+                const warnings = [];
+                if (extras?.warn) warnings.push(extras.warn);
+
+                const cats = hasOT ? ['Full Game', '1H', '2H', 'OT', '2H+OT'] : ['Full Game', '1H', '2H'];
+                const fs = {};
+                cats.forEach(cat => {
+                    const r = raw[cat];
+                    const catExtras = cat === 'Full Game' ? extras : null;
+                    // A player with no rushing/passing/receiving/fumbles line in
+                    // this category still has a real FS if they scored via a
+                    // return/fumble-recovery TD or 2pt conversion (Full Game
+                    // scoring-info extras) — only truly blank when neither exists.
+                    const hasAnyStat = r && (r.rushing || r.passing || r.receiving || r.fumbles);
+                    if (!hasAnyStat && !catExtras) { fs[cat] = null; return; }
+                    fs[cat] = fballoGbFsFromStats(r?.rushing, r?.passing, r?.receiving, r?.fumbles, catExtras);
+                });
+
+                rows.push({ team, name, dnp: false, raw, extras, fs, warnings });
+            });
+        });
+
+        rows.sort((a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name));
+        return { rows, hasOT, foundSections, roster };
+    }
+
+    // --- NFL Offensive Gamebook — UI wiring (mirrors Basketball's bballGb pattern) ---
+    const fballoGbFileInput      = document.querySelector('#fballo-gb-file-input');
+    const fballoGbDropZone       = document.querySelector('#fballo-gb-dropzone');
+    const fballoGbStatus         = document.querySelector('#fballo-gb-status');
+    const fballoGbMissing        = document.querySelector('#fballo-gb-missing');
+    const fballoGbTeamTabs       = document.querySelector('#fballo-gb-team-tabs');
+    const fballoGbResultsWrap    = document.querySelector('#fballo-gb-results-wrap');
+    const fballoGbResultsHead    = document.querySelector('#fballo-gb-results-head');
+    const fballoGbResultsBody    = document.querySelector('#fballo-gb-results-body');
+    const fballoGbBreakdownLabel = document.querySelector('#fballo-gb-breakdown-label');
+    const fballoGbBreakdownArea  = document.querySelector('#fballo-gb-breakdown-area');
+    const fballoGbBreakdownEl    = document.querySelector('#fballo-gb-breakdown');
+    const fballoGbBreakdownCopy  = document.querySelector('#fballo-gb-breakdown-copy');
+
+    let fballoGbLastRows   = [];
+    let fballoGbHasOT      = false;
+    let fballoGbActiveTeam = null;
+
+    function fballoGbSetStatus(msg, type = '') {
+        fballoGbStatus.textContent = msg;
+        fballoGbStatus.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    /** Full raw stat line for one category table (all columns, not just the FS-relevant ones). */
+    function fballoGbRawLines(raw) {
+        const lines = [];
+        if (raw.rushing) {
+            const s = raw.rushing;
+            lines.push(`Rushing — ATT ${s.att} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`);
+        }
+        if (raw.passing) {
+            const s = raw.passing;
+            lines.push(`Passing — ATT ${s.att} / CMP ${s.cmp} / YDS ${s.yds} / SK-YD ${s.sackYd} / TD ${s.td} / LG ${s.lg} / IN ${s.int} / RT ${s.rt}`);
+        }
+        if (raw.receiving) {
+            const s = raw.receiving;
+            lines.push(`Receiving — TAR ${s.tar} / REC ${s.rec} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`);
+        }
+        if (raw.fumbles) {
+            const s = raw.fumbles;
+            lines.push(`Fumbles — FUM ${s.fum} / LOST ${s.lost} / OWN-REC ${s.ownRec} / YDS ${s.ownRecYds} / TD ${s.ownRecTd} / FORCED ${s.forced} / OPP-REC ${s.oppRec} / YDS ${s.oppRecYds} / TD ${s.oppRecTd} / OUT-BDS ${s.outBds}`);
+        }
+        return lines;
+    }
+
+    function fballoGbBreakdownLines(r, cat) {
+        const raw = r.raw[cat] || {};
+        const extras = cat === 'Full Game' ? r.extras : null;
+        const passYd = raw.passing?.yds || 0, passTd = raw.passing?.td || 0, int = raw.passing?.int || 0;
+        const rushYd = raw.rushing?.yds || 0, rushTd = raw.rushing?.td || 0;
+        const recYd  = raw.receiving?.yds || 0, recTd = raw.receiving?.td || 0, rec = raw.receiving?.rec || 0;
+        const fumLost = raw.fumbles?.lost || 0;
+        const twoPtc = extras?.twoPtc || 0, ofrt = extras?.ofrt || 0, kpfgrtd = extras?.kpfgrtd || 0;
+        const lines = [
+            `Passing Yards: 0.04 pts/yard (${passYd}) = ${Number((passYd * 0.04).toFixed(2))}`,
+            `Passing TDs: 4 pts (${passTd}) = ${passTd * 4}`,
+            `Interceptions: -1 pt (${int}) = ${int * -1}`,
+            `Rushing Yards: 0.1 pts/yard (${rushYd}) = ${Number((rushYd * 0.1).toFixed(1))}`,
+            `Rushing TDs: 6 pts (${rushTd}) = ${rushTd * 6}`,
+            `Receiving Yards: 0.1 pts/yard (${recYd}) = ${Number((recYd * 0.1).toFixed(1))}`,
+            `Receiving TDs: 6 pts (${recTd}) = ${recTd * 6}`,
+            `Receptions: 1 pt (${rec}) = ${rec}`,
+            `Fumbles Lost: -1 pt (${fumLost}) = ${fumLost * -1}`,
+        ];
+        if (cat === 'Full Game') {
+            lines.push(
+                `2 Point Conversions: 2 pts (${twoPtc}) = ${twoPtc * 2}`,
+                `Offensive Fumble Recovery Touchdown: 6 pts (${ofrt}) = ${ofrt * 6}`,
+                `Kick/Punt/Field Goal Return Touchdown: 6 pts (${kpfgrtd}) = ${kpfgrtd * 6}`,
+            );
+        } else {
+            lines.push('2-Pt Conversions / Off. Fumble Recovery TD / Kick-Punt-FG Return TD: only tracked for Full Game.');
+        }
+
+        const rawLines = fballoGbRawLines(raw);
+        if (rawLines.length) {
+            lines.push('', '— Full raw stat line —', ...rawLines);
+        }
+        return lines;
+    }
+
+    function fballoGbShowBreakdown(row, cat) {
+        const fs = row.fs[cat];
+        if (fs === null || fs === undefined) return;
+        const header = `${row.name} - ${cat} FS`;
+        const text = `${header}\n${fballoGbBreakdownLines(row, cat).join('\n')}\n\nTOTAL FS = ${fs}`;
+        fballoGbBreakdownEl.value = text;
+        fballoGbBreakdownLabel.style.display = 'block';
+        fballoGbBreakdownArea.style.display = 'block';
+    }
+
+    function fballoGbFmtCell(row, cat) {
+        const val = row.fs[cat];
+        if (val === null || val === undefined) return '<span class="gamebook-dnp-cell">—</span>';
+        const key = `${row.team}__${row.name}`;
+        return `<span class="gamebook-cell-clickable" data-key="${key}" data-cat="${cat}">${val}</span>`;
+    }
+
+    function fballoGbRenderTeamTabs(rows) {
+        const teams = [...new Set(rows.map(r => r.team))];
+        fballoGbTeamTabs.innerHTML = teams.map(t =>
+            `<label class="round-pill" style="width:${Math.floor(100 / teams.length) - 1}%">
+                <input type="radio" name="fballo-gb-team-tab" value="${t}" ${t === fballoGbActiveTeam ? 'checked' : ''}> ${t}
+             </label>`
+        ).join('');
+        fballoGbTeamTabs.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                fballoGbActiveTeam = radio.value;
+                fballoGbBreakdownLabel.style.display = 'none';
+                fballoGbBreakdownArea.style.display = 'none';
+                fballoGbRenderResults(fballoGbLastRows, fballoGbHasOT, fballoGbActiveTeam);
+            });
+        });
+        fballoGbTeamTabs.style.display = teams.length > 0 ? 'flex' : 'none';
+    }
+
+    function fballoGbRawCell(row, cat, category, key) {
+        const raw = row.raw?.[cat]?.[category];
+        if (!raw) return '—';
+        return raw[key] ?? '—';
+    }
+
+    function fballoGbRenderResults(allRows, hasOT, activeTeam) {
+        const rows = allRows.filter(r => r.team === activeTeam);
+        const cats = hasOT ? ['Full Game', '1H', '2H', 'OT', '2H+OT'] : ['Full Game', '1H', '2H'];
+
+        fballoGbResultsHead.innerHTML = '<tr><th>Player</th>' +
+            cats.map(c => `<th>${c} FS</th>`).join('') + '<th>Flags</th></tr>';
+
+        fballoGbResultsBody.innerHTML = rows.map(r => {
+            if (r.dnp) {
+                return `<tr><td>${r.name}</td>${cats.map(() => '<td><span class="gamebook-dnp-cell">DNP</span></td>').join('')}<td>—</td></tr>`;
+            }
+            const cells = cats.map(c => `<td>${fballoGbFmtCell(r, c)}</td>`).join('');
+            const flags = r.warnings.length
+                ? `<span class="manual-badge gamebook-flag-warn" title="${r.warnings.join('; ')}">⚠ Check</span>`
+                : '—';
+            return `<tr><td>${r.name}</td>${cells}<td>${flags}</td></tr>`;
+        }).join('');
+    }
+
+    fballoGbResultsBody.addEventListener('click', e => {
+        const cell = e.target.closest('.gamebook-cell-clickable');
+        if (!cell) return;
+        const row = fballoGbLastRows.find(r => `${r.team}__${r.name}` === cell.dataset.key);
+        if (!row) return;
+        document.querySelectorAll('.gamebook-cell-active').forEach(el => el.classList.remove('gamebook-cell-active'));
+        cell.classList.add('gamebook-cell-active');
+        fballoGbShowBreakdown(row, cell.dataset.cat);
+    });
+
+    fballoGbBreakdownCopy.addEventListener('click', () => {
+        fballoGbBreakdownEl.select();
+        fballoGbBreakdownEl.setSelectionRange(0, 99999);
+        triggerToastBtn.click();
+        navigator.clipboard.writeText(fballoGbBreakdownEl.value);
+    });
+
+    async function fballoGbHandleFile(file) {
+        if (!file || file.type !== 'application/pdf') {
+            fballoGbSetStatus('Please upload a PDF file.', 'error');
+            return;
+        }
+        fballoGbResultsWrap.style.display = 'none';
+        fballoGbResultsBody.innerHTML = '';
+        fballoGbResultsHead.innerHTML = '';
+        fballoGbMissing.textContent = '';
+        fballoGbBreakdownLabel.style.display = 'none';
+        fballoGbBreakdownArea.style.display = 'none';
+        fballoGbSetStatus(`Reading ${file.name}…`, 'loading');
+
+        try {
+            const buffer = await file.arrayBuffer();
+            const { rows, hasOT, foundSections } = await fballoGbParsePdf(buffer);
+            fballoGbLastRows = rows;
+            fballoGbHasOT = hasOT;
+
+            const required = ['Full Game', '1H'];
+            const missing = required.filter(t => !foundSections.includes(t));
+            if (missing.length > 0) {
+                fballoGbMissing.textContent = `Note: could not find these sections in the PDF — ${missing.join(', ')}. Related columns may be incomplete.`;
+            } else if (!foundSections.includes('2H')) {
+                fballoGbMissing.textContent = `Note: this gamebook has no separate "Second Half Summary" section — 2H was computed as Full Game minus 1H instead.`;
+            }
+
+            const teams = [...new Set(rows.map(r => r.team))];
+            fballoGbActiveTeam = teams[0] || null;
+            fballoGbRenderTeamTabs(rows);
+            fballoGbRenderResults(rows, hasOT, fballoGbActiveTeam);
+
+            const dnpCount = rows.filter(r => r.dnp).length;
+            fballoGbSetStatus(
+                `Parsed ${rows.length - dnpCount} player(s)${dnpCount ? ` (${dnpCount} DNP)` : ''} from ${foundSections.length} section(s)${hasOT ? ' (game went to OT)' : ''}. Click any FS value for its breakdown.`,
+                'success'
+            );
+            fballoGbResultsWrap.style.display = 'block';
+        } catch (err) {
+            fballoGbSetStatus('Could not parse this PDF — ' + err.message, 'error');
+        }
+    }
+
+    fballoGbFileInput.addEventListener('change', () => fballoGbHandleFile(fballoGbFileInput.files[0]));
+    ['dragenter', 'dragover'].forEach(evt =>
+        fballoGbDropZone.addEventListener(evt, e => { e.preventDefault(); fballoGbDropZone.classList.add('gamebook-dropzone--active'); })
+    );
+    ['dragleave', 'drop'].forEach(evt =>
+        fballoGbDropZone.addEventListener(evt, e => { e.preventDefault(); fballoGbDropZone.classList.remove('gamebook-dropzone--active'); })
+    );
+    fballoGbDropZone.addEventListener('drop', e => {
+        const file = e.dataTransfer.files[0];
+        if (file) fballoGbHandleFile(file);
+    });
+    fballoGbDropZone.addEventListener('click', () => fballoGbFileInput.click());
+
+    document.querySelector('#fballo-gb-clear').addEventListener('click', () => {
+        fballoGbFileInput.value = '';
+        fballoGbResultsWrap.style.display = 'none';
+        fballoGbResultsBody.innerHTML = '';
+        fballoGbResultsHead.innerHTML = '';
+        fballoGbMissing.textContent = '';
+        fballoGbTeamTabs.innerHTML = '';
+        fballoGbTeamTabs.style.display = 'none';
+        fballoGbBreakdownLabel.style.display = 'none';
+        fballoGbBreakdownArea.style.display = 'none';
+        fballoGbLastRows = [];
+        fballoGbHasOT = false;
+        fballoGbActiveTeam = null;
+        fballoGbSetStatus('', '');
+    });
+
     // ========================================================
     //  NFL DST (currently hidden in the UI)
     // ========================================================

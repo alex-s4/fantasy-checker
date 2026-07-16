@@ -265,6 +265,11 @@ main {
 
 .calc-card--wide { width: 480px; }
 
+/* NFL Offensive + Tennis — widened together (post Gamebook Upload mode
+   needing more horizontal room) so the two cards stay visually aligned
+   when they sit side by side. */
+.calc-card--wide-plus { width: 640px; }
+
 /* Full-width cards (Basketball, MLB Pitcher/Hitter, NHL TOI, Gamebook
    Checker cards) — one shared definition instead of each card carrying
    its own inline max-width (which also meant the mobile override below
@@ -843,7 +848,7 @@ a.popover-btn { padding: 0 0 0 6px; }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 720px) {
-  .calc-card, .calc-card--wide, .calc-card--full { width: 100%; max-width: 420px; }
+  .calc-card, .calc-card--wide, .calc-card--wide-plus, .calc-card--full { width: 100%; max-width: 420px; }
   .nav-inner { flex-wrap: wrap; gap: .5rem; }
   .main-brand-text { font-size: 1.5rem; }
 }

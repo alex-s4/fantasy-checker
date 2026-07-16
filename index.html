@@ -851,7 +851,7 @@
             <!-- ══════════════════════════════════════════════════
            NFL / CFB OFFENSIVE
       ══════════════════════════════════════════════════ -->
-      <div class="calc-card calc-card--wide">
+      <div class="calc-card calc-card--wide-plus">
         <div class="card-header" id="head-fballo">
           <img alt="NFL" src="https://static.prizepicks.com/images/leagues/production/30.svg" class="league-icon">
           <h3>Football FS <span class="manual-bolt"><i class="fa-solid fa-bolt"></i></h3>
@@ -860,8 +860,69 @@
 
         <div class="card-body" id="content-fballo">
 
-          
+        <!-- Mode toggle. Name Search is coming in a follow-up pass —
+             Player Search (the existing ESPN drill-down below) and
+             Manual are both fully working today. -->
+        <div class="mode-toggle">
+          <label class="mode-btn">
+            <input type="radio" name="fballo-mode" id="fballo-mode-gamebook" class="fballo-mode-radio" checked>
+            <i class="fa-solid fa-file-pdf"></i> Gamebook
+          </label>
+          <label class="mode-btn">
+            <input type="radio" name="fballo-mode" id="fballo-mode-search" class="fballo-mode-radio">
+            <i class="fa-solid fa-list"></i> Player Search
+          </label>
+          <label class="mode-btn">
+            <input type="radio" name="fballo-mode" id="fballo-mode-manual" class="fballo-mode-radio">
+            <i class="fa-solid fa-keyboard"></i> Manual
+          </label>
+        </div>
 
+        <!-- ── Upload Gamebook mode ── -->
+        <div id="fballo-gamebook-mode">
+          <div class="info-banner">
+            <i class="fa-solid fa-circle-info"></i>
+            <div>
+              Upload the official NFL Game Summary PDF to compute offensive fantasy scores for every player at once — Full Game, 1H, 2H (combined with OT, if any). 2-Pt Conversions, Offensive Fumble Recovery TD, and Kick/Punt/FG Return TD are auto-filled from the gamebook's Player Scoring Information table when present.
+            </div>
+          </div>
+
+          <div class="gamebook-dropzone" id="fballo-gb-dropzone">
+            <i class="fa-solid fa-file-pdf gamebook-dropzone-icon"></i>
+            <p>Drop the NFL Game Summary PDF here, or click to browse</p>
+          </div>
+          <input type="file" id="fballo-gb-file-input" accept="application/pdf" class="hide">
+
+          <p id="fballo-gb-status" class="fetch-msg"></p>
+          <p id="fballo-gb-missing" class="manual-note"></p>
+
+          <div class="btn-row" style="margin-bottom:.5rem">
+            <button id="fballo-gb-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div id="fballo-gb-team-tabs" class="round-pill-group" style="display:none; margin-bottom:.6rem"></div>
+
+          <div id="fballo-gb-results-wrap" class="gamebook-table-wrap" style="display:none">
+            <table class="gamebook-table">
+              <thead id="fballo-gb-results-head"></thead>
+              <tbody id="fballo-gb-results-body"></tbody>
+            </table>
+          </div>
+
+          <p class="section-label" id="fballo-gb-breakdown-label" style="display:none">— Breakdown (click a value in the table above) —</p>
+          <div class="breakdown-area" id="fballo-gb-breakdown-area" style="display:none">
+            <textarea id="fballo-gb-breakdown" class="breakdown-textarea" rows="20" readonly></textarea>
+            <div class="breakdown-actions visible">
+              <button id="fballo-gb-breakdown-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             Player Search mode — the existing ESPN drill-down,
+             unchanged, just wrapped for the mode toggle.
+        ══════════════════════════════════════════════════ -->
+        <div id="fballo-search-mode" style="display:none">
           <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date (ET) —</p>
           <div class="fetch-row">
             <input type="date" id="fballo-date" class="stat-input stat-input--full">
@@ -935,12 +996,60 @@
             </div>
           </div>
         </div>
+
+        <!-- ══════════════════════════════════════════════════
+             Manual mode — independent duplicate stat-input set
+             (fballo-man-*) so it can't cross-contaminate Player
+             Search's auto-filled values.
+        ══════════════════════════════════════════════════ -->
+        <div id="fballo-manual-mode" style="display:none">
+          <p class="manual-note" style="margin-top:0">Enter stats directly in the table below.</p>
+
+          <input type="text" id="fballo-man-player-name" class="stat-input player-name-input" placeholder="Player name (optional)">
+
+          <table class="stat-table">
+            <tr><td>Passing Yards</td><td>0.04 pts/yd</td><td><input type="number" id="fballo-man-passyd" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-passyd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Passing TDs</td><td>4 pts</td><td><input type="number" id="fballo-man-passtd" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-passtd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Interceptions</td><td>−1 pt</td><td><input type="number" id="fballo-man-int" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-int-val" class="fballo-val"></span></td></tr>
+            <tr><td>Rushing Yards</td><td>0.1 pts/yd</td><td><input type="number" id="fballo-man-rushyd" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-rushyd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Rushing TDs</td><td>6 pts</td><td><input type="number" id="fballo-man-rushtd" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-rushtd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Receiving Yards</td><td>0.1 pts/yd</td><td><input type="number" id="fballo-man-recyd" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-recyd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Receiving TDs</td><td>6 pts</td><td><input type="number" id="fballo-man-rectd" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-rectd-val" class="fballo-val"></span></td></tr>
+            <tr><td>Receptions</td><td>1 pt</td><td><input type="number" id="fballo-man-rec" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-rec-val" class="fballo-val"></span></td></tr>
+            <tr><td>Fumbles Lost</td><td>−1 pt</td><td><input type="number" id="fballo-man-fl" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-fl-val" class="fballo-val"></span></td></tr>
+            <tr><td>2-Pt Conversions</td><td>2 pts</td><td><input type="number" id="fballo-man-2ptc" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-2ptc-val" class="fballo-val"></span></td></tr>
+            <tr><td>Off. Fumble Recovery TD</td><td>6 pts</td><td><input type="number" id="fballo-man-ofrt" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-ofrt-val" class="fballo-val"></span></td></tr>
+            <tr><td>Kick/Punt/FG Return TD</td><td>6 pts</td><td><input type="number" id="fballo-man-kpfgrtd" class="stat-input fballo-man-fs" min="0"></td><td><span id="fballo-man-kpfgrtd-val" class="fballo-val"></span></td></tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="fballo-man-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="fballo-man-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go</button>
+            <button id="fballo-man-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="fballo-man-breakdown" class="breakdown-textarea" rows="14" readonly></textarea>
+            <div id="fballo-man-textarea-btn-cont" class="breakdown-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="fballo-man-hzs-checkbox"> Hide zero stats
+              </label>
+              <button id="fballo-man-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+          </div>
+        </div>
+        </div>
       </div>
 
             <!-- ══════════════════════════════════════════════════
            TENNIS
       ══════════════════════════════════════════════════ -->
-      <div class="calc-card calc-card--wide">
+      <div class="calc-card calc-card--wide-plus">
         <div class="card-header" id="head-tennis">
           <img alt="Tennis" src="https://static.prizepicks.com/images/leagues/production/54.svg" class="league-icon">
           <h3>Tennis FS</h3>
