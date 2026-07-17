@@ -896,21 +896,6 @@ a.popover-btn { padding: 0 0 0 6px; }
   vertical-align: middle;
 }
 
-.manual-book {
-  display: inline-block;
-  font-size: .65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: rgb(0, 255, 55);
-  background: var(--bg-input);
-  border: 1px solid rgb(0, 255, 55);
-  border-radius: 4px;
-  padding: 3px 5px;
-  margin-left: .4rem;
-  vertical-align: middle;
-}
-
 .manual-note {
   font-size: .72rem;
   color: var(--text-muted);
@@ -1016,6 +1001,11 @@ a.popover-btn { padding: 0 0 0 6px; }
   background: var(--purple) !important;
   color: #fff !important;
   font-weight: 600;
+}
+.gamebook-cell-flagged {
+  color: #ff6b6b;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
 }
 
 /* ── Gamebook Checker — Flag badges (reuses .manual-badge base) ── */

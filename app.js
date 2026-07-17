@@ -2533,6 +2533,160 @@ window.onload = function () {
     }
 
     /** Top-level: parse an uploaded NFL Game Summary PDF into the per-player, per-team, per-category table. */
+    // ============================================================
+    //  Play-by-play quarter-level parser (1Q/2Q/3Q/4Q/OT).
+    //
+    //  There's no per-quarter box score in these PDFs (only Full Game,
+    //  1H, and sometimes 2H/OT), so 1Q/2Q/3Q/4Q have to come from
+    //  reading the actual play-by-play text and attributing each play
+    //  to a passer/rusher/receiver. Validated against 5 real gamebooks
+    //  (346-plus/347 individual ATT/CMP/YDS/TD checks passed — see
+    //  build notes). One known limitation: a run partially negated by
+    //  an *untagged* offensive-holding penalty (no "No Play" text) is
+    //  credited by the NFL at the foul spot, a yardage adjustment this
+    //  parser can't recover from the play text alone. When a player's
+    //  1Q+2Q or 3Q+4Q sum doesn't reconcile with the (box-score-derived,
+    //  trustworthy) 1H/2H total, the affected quarter cells are flagged
+    //  rather than silently shown — see fballoGbReconcileQuarters.
+    // ============================================================
+    const FBALLOGB_PBP_NAME = "[A-Z]\\.[A-Za-z'-]+";
+    function fballoGbYd(s) { return s === 'no' ? 0 : Number(s); }
+    const FBALLOGB_YD_TOKEN = '(-?\\d+|no) (?:yards?|gain)';
+
+    function fballoGbIsNegatedByPenalty(lines, i) {
+        let j = i + 1;
+        while (j < lines.length && /^(PENALTY|Penalty) on/.test(lines[j])) {
+            if (/No Play/.test(lines[j])) return true;
+            j++;
+        }
+        return false;
+    }
+    function fballoGbIsNegatedByReversal(lines, i) {
+        for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+            if (/^\d+-\d+-/.test(lines[j])) return false; // hit the next down marker first
+            if (/the play was REVERSED/.test(lines[j])) return true;
+        }
+        return false;
+    }
+    function fballoGbIsNegated(lines, i) {
+        return fballoGbIsNegatedByPenalty(lines, i) || fballoGbIsNegatedByReversal(lines, i);
+    }
+
+    /** Parse one quarter/OT period's play-by-play lines into per-player {passAtt,passCmp,passYd,passTd,passInt,rushAtt,rushYd,rushTd,rec,recYd,recTd}. */
+    function fballoGbParseQuarterPlays(lines) {
+        const stats = {};
+        function get(name) {
+            if (!stats[name]) stats[name] = { passAtt: 0, passCmp: 0, passYd: 0, passTd: 0, passInt: 0, rushAtt: 0, rushYd: 0, rushTd: 0, rec: 0, recYd: 0, recTd: 0 };
+            return stats[name];
+        }
+        const NAME = FBALLOGB_PBP_NAME, YD_TOKEN = FBALLOGB_YD_TOKEN;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^(PENALTY|Penalty) on/.test(line)) continue;
+            if (/kicks? \d+ yards| punts \d+ yards/.test(line)) continue;
+            if (/ sacked at /.test(line)) continue;
+
+            let m = line.match(new RegExp(`(${NAME}) pass .*?INTERCEPTED`));
+            if (m) { if (!fballoGbIsNegated(lines, i)) get(m[1]).passAtt++; continue; }
+
+            m = line.match(new RegExp(`(${NAME}) spiked the ball`));
+            if (m) { if (!fballoGbIsNegated(lines, i)) get(m[1]).passAtt++; continue; }
+
+            m = line.match(new RegExp(`(${NAME}) pass incomplete`));
+            if (m) { if (!fballoGbIsNegated(lines, i)) get(m[1]).passAtt++; continue; }
+
+            m = line.match(new RegExp(`(${NAME}) pass (?:(?:short|deep) (?:left|right|middle) )?to (${NAME}) .*?for ${YD_TOKEN}(, TOUCHDOWN)?`));
+            if (m) {
+                if (!fballoGbIsNegated(lines, i)) {
+                    const passer = get(m[1]), receiver = get(m[2]);
+                    const y = fballoGbYd(m[3]), td = !!m[4];
+                    passer.passAtt++; passer.passCmp++; passer.passYd += y; if (td) passer.passTd++;
+                    receiver.rec++; receiver.recYd += y; if (td) receiver.recTd++;
+                }
+                continue;
+            }
+
+            m = line.match(new RegExp(`(${NAME}) scrambles .*?(?:to|at) [\\w ]+ for ${YD_TOKEN}(, TOUCHDOWN)?`));
+            if (m) {
+                if (!fballoGbIsNegated(lines, i)) { const p = get(m[1]); p.rushAtt++; p.rushYd += fballoGbYd(m[2]); if (m[3]) p.rushTd++; }
+                continue;
+            }
+
+            m = line.match(new RegExp(`(${NAME}) kneels to [\\w ]+ for ${YD_TOKEN}`));
+            if (m) {
+                if (!fballoGbIsNegated(lines, i)) { const p = get(m[1]); p.rushAtt++; p.rushYd += fballoGbYd(m[2]); }
+                continue;
+            }
+
+            // Aborted snap (botched shotgun exchange) — credited as a 0-yard rush attempt.
+            m = line.match(new RegExp(`(${NAME}) FUMBLES \\(Aborted\\)`));
+            if (m) {
+                if (!fballoGbIsNegated(lines, i)) { const p = get(m[1]); p.rushAtt++; }
+                continue;
+            }
+
+            const rushRe = new RegExp(`(${NAME}) (?:left|right|up|down) (?:tackle|guard|end|the middle) .*?for ${YD_TOKEN}(, TOUCHDOWN)?`, 'g');
+            let lastRush = null, rm;
+            while ((rm = rushRe.exec(line))) lastRush = rm;
+            if (lastRush) {
+                if (!fballoGbIsNegated(lines, i)) { const p = get(lastRush[1]); p.rushAtt++; p.rushYd += fballoGbYd(lastRush[2]); if (lastRush[3]) p.rushTd++; }
+                continue;
+            }
+        }
+        return stats;
+    }
+
+    /** Convert one player's parsed play-by-play stats into the same {rushing,passing,receiving} shape used by the box-score parser (fumbles isn't tracked from play text — Full Game/1H/2H fumbles-lost, which come from the box score, remain the source of truth). */
+    function fballoGbPbpToRawCat(s) {
+        if (!s) return { rushing: null, passing: null, receiving: null, fumbles: null };
+        return {
+            rushing:   s.rushAtt ? { att: s.rushAtt, yds: s.rushYd, td: s.rushTd } : null,
+            passing:   s.passAtt ? { att: s.passAtt, cmp: s.passCmp, yds: s.passYd, td: s.passTd, int: s.passInt } : null,
+            receiving: s.rec     ? { rec: s.rec, yds: s.recYd, td: s.recTd } : null,
+            fumbles:   null,
+        };
+    }
+
+    /** Split the full play-by-play text into 1Q/2Q/3Q/4Q/OT per-player stat maps. */
+    function fballoGbExtractQuarterStats(allLines) {
+        const labels = [
+            ['1Q', 'Play By Play First Quarter'],
+            ['2Q', 'Play By Play Second Quarter'],
+            ['3Q', 'Play By Play Third Quarter'],
+            ['4Q', 'Play By Play Fourth Quarter'],
+            ['pbpOT', 'Play By Play Overtime'],
+        ];
+        const out = {};
+        labels.forEach(([key, marker]) => {
+            const idx = allLines.findIndex(l => l.startsWith(marker));
+            if (idx === -1) return;
+            let end = allLines.length;
+            for (let j = idx + 1; j < allLines.length; j++) {
+                if (/^Play By Play|^Miscellaneous Statistics Report/.test(allLines[j])) { end = j; break; }
+            }
+            out[key] = fballoGbParseQuarterPlays(allLines.slice(idx + 1, end));
+        });
+        return out;
+    }
+
+    /** Does the combined 1Q+2Q (or 3Q+4Q) yardage/TD/attempt total match the trustworthy box-score-derived half total? Returns true if it reconciles. */
+    function fballoGbReconcileQuarters(qA, qB, halfBox) {
+        function add(a, b) { return (a || 0) + (b || 0); }
+        const checks = [
+            [add(qA.rushing?.att, qB.rushing?.att), halfBox.rushing?.att || 0],
+            [add(qA.rushing?.yds, qB.rushing?.yds), halfBox.rushing?.yds || 0],
+            [add(qA.rushing?.td,  qB.rushing?.td),  halfBox.rushing?.td  || 0],
+            [add(qA.passing?.att, qB.passing?.att), halfBox.passing?.att || 0],
+            [add(qA.passing?.cmp, qB.passing?.cmp), halfBox.passing?.cmp || 0],
+            [add(qA.passing?.yds, qB.passing?.yds), halfBox.passing?.yds || 0],
+            [add(qA.passing?.td,  qB.passing?.td),  halfBox.passing?.td  || 0],
+            [add(qA.receiving?.rec, qB.receiving?.rec), halfBox.receiving?.rec || 0],
+            [add(qA.receiving?.yds, qB.receiving?.yds), halfBox.receiving?.yds || 0],
+            [add(qA.receiving?.td,  qB.receiving?.td),  halfBox.receiving?.td  || 0],
+        ];
+        return checks.every(([a, b]) => a === b);
+    }
+
     async function fballoGbParsePdf(arrayBuffer) {
         const doc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const pageLines = [];
@@ -2568,6 +2722,18 @@ window.onload = function () {
 
         const hasOT = !!sectionTeams['OT'];
 
+        // Play-by-play-derived 1Q/2Q/3Q/4Q(/OT) stats, attributed to a team via roster lookup.
+        const quarterStatsRaw = fballoGbExtractQuarterStats(allLines);
+        const quarterStatsByTeam = {}; // { '1Q': { team: { name: pbpStatsObj } }, ... }
+        Object.entries(quarterStatsRaw).forEach(([qkey, playerMap]) => {
+            quarterStatsByTeam[qkey] = {};
+            teamNames.forEach(t => { quarterStatsByTeam[qkey][t] = {}; });
+            Object.entries(playerMap).forEach(([name, stats]) => {
+                const team = teamNames.find(t => rosterByTeam[t] && rosterByTeam[t].has(name)) || teamNames[0];
+                quarterStatsByTeam[qkey][team][name] = stats;
+            });
+        });
+
         // Build one row per player per team.
         const rows = [];
         teamNames.forEach(team => {
@@ -2583,7 +2749,7 @@ window.onload = function () {
                 const dnp = roster[team].dnpNames.has(name) && !sectionTeams['Full Game'][team].rushing[name]
                     && !sectionTeams['Full Game'][team].passing[name] && !sectionTeams['Full Game'][team].receiving[name];
                 if (dnp) {
-                    rows.push({ team, name, dnp: true, warnings: [] });
+                    rows.push({ team, name, dnp: true, warnings: [], quarterFlags: {} });
                     return;
                 }
 
@@ -2627,11 +2793,38 @@ window.onload = function () {
                     };
                 }
 
+                // 1Q/2Q/3Q/4Q from the play-by-play parser.
+                const quarterFlags = {};
+                ['1Q', '2Q', '3Q', '4Q'].forEach(qkey => {
+                    raw[qkey] = fballoGbPbpToRawCat(quarterStatsByTeam[qkey]?.[team]?.[name]);
+                });
+                if (!fballoGbReconcileQuarters(raw['1Q'], raw['2Q'], raw['1H'])) {
+                    quarterFlags['1Q'] = quarterFlags['2Q'] = true;
+                }
+                if (!fballoGbReconcileQuarters(raw['3Q'], raw['4Q'], raw['2H'])) {
+                    quarterFlags['3Q'] = quarterFlags['4Q'] = true;
+                }
+                if (hasOT) {
+                    raw['4Q+OT'] = {
+                        rushing:   fballoGbSumCat([raw['4Q'].rushing,   raw['OT'].rushing]),
+                        passing:   fballoGbSumCat([raw['4Q'].passing,   raw['OT'].passing]),
+                        receiving: fballoGbSumCat([raw['4Q'].receiving, raw['OT'].receiving]),
+                        // 4Q (play-by-play-derived) doesn't track fumbles at all, so OT's
+                        // box-derived fumbles are the only real signal available here —
+                        // any 4Q fumble-lost stats are missing from this combined total.
+                        fumbles:   raw['OT'].fumbles || null,
+                    };
+                    if (quarterFlags['4Q']) quarterFlags['4Q+OT'] = true;
+                }
+
                 const extras = scoringInfo[name] || null;
                 const warnings = [];
                 if (extras?.warn) warnings.push(extras.warn);
+                if (quarterFlags['1Q'] || quarterFlags['3Q']) {
+                    warnings.push("Quarter split (1Q/2Q or 3Q/4Q) doesn't add up to the 1H/2H total — likely a run partially negated by an untagged penalty, where the NFL credits yardage at the foul spot rather than the play's full or zero distance. 1H/2H/Full Game totals are still correct; the flagged quarter-level numbers may be off. Verify by hand against the play-by-play.");
+                }
 
-                const cats = hasOT ? ['Full Game', '1H', '2H', 'OT', '2H+OT'] : ['Full Game', '1H', '2H'];
+                const cats = hasOT ? ['Full Game', '1H', '1Q', '2H', 'OT', '2H+OT', '4Q', '4Q+OT'] : ['Full Game', '1H', '1Q', '2H', '4Q'];
                 const fs = {};
                 cats.forEach(cat => {
                     const r = raw[cat];
@@ -2645,12 +2838,13 @@ window.onload = function () {
                     fs[cat] = fballoGbFsFromStats(r?.rushing, r?.passing, r?.receiving, r?.fumbles, catExtras);
                 });
 
-                rows.push({ team, name, dnp: false, raw, extras, fs, warnings });
+                rows.push({ team, name, dnp: false, raw, extras, fs, warnings, quarterFlags });
             });
         });
 
         rows.sort((a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name));
-        return { rows, hasOT, foundSections, roster };
+        const foundPbp = Object.keys(quarterStatsRaw).length > 0;
+        return { rows, hasOT, foundSections, roster, foundPbp };
     }
 
     // --- NFL Offensive Gamebook — UI wiring (mirrors Basketball's bballGb pattern) ---
@@ -2681,15 +2875,21 @@ window.onload = function () {
         const lines = [];
         if (raw.rushing) {
             const s = raw.rushing;
-            lines.push(`Rushing — ATT ${s.att} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`);
+            lines.push(s.avg !== undefined
+                ? `Rushing — ATT ${s.att} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`
+                : `Rushing — ATT ${s.att} / YDS ${s.yds} / TD ${s.td} (play-by-play derived — AVG/LG not tracked per-quarter)`);
         }
         if (raw.passing) {
             const s = raw.passing;
-            lines.push(`Passing — ATT ${s.att} / CMP ${s.cmp} / YDS ${s.yds} / SK-YD ${s.sackYd} / TD ${s.td} / LG ${s.lg} / IN ${s.int} / RT ${s.rt}`);
+            lines.push(s.rt !== undefined
+                ? `Passing — ATT ${s.att} / CMP ${s.cmp} / YDS ${s.yds} / SK-YD ${s.sackYd} / TD ${s.td} / LG ${s.lg} / IN ${s.int} / RT ${s.rt}`
+                : `Passing — ATT ${s.att} / CMP ${s.cmp} / YDS ${s.yds} / TD ${s.td} / IN ${s.int} (play-by-play derived — SK-YD/LG/RT not tracked per-quarter)`);
         }
         if (raw.receiving) {
             const s = raw.receiving;
-            lines.push(`Receiving — TAR ${s.tar} / REC ${s.rec} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`);
+            lines.push(s.avg !== undefined
+                ? `Receiving — TAR ${s.tar} / REC ${s.rec} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`
+                : `Receiving — REC ${s.rec} / YDS ${s.yds} / TD ${s.td} (play-by-play derived — TAR/AVG/LG not tracked per-quarter)`);
         }
         if (raw.fumbles) {
             const s = raw.fumbles;
@@ -2701,12 +2901,23 @@ window.onload = function () {
     function fballoGbBreakdownLines(r, cat) {
         const raw = r.raw[cat] || {};
         const extras = cat === 'Full Game' ? r.extras : null;
+        const isQuarterCat = ['1Q', '2Q', '3Q', '4Q'].includes(cat);
         const passYd = raw.passing?.yds || 0, passTd = raw.passing?.td || 0, int = raw.passing?.int || 0;
         const rushYd = raw.rushing?.yds || 0, rushTd = raw.rushing?.td || 0;
         const recYd  = raw.receiving?.yds || 0, recTd = raw.receiving?.td || 0, rec = raw.receiving?.rec || 0;
         const fumLost = raw.fumbles?.lost || 0;
         const twoPtc = extras?.twoPtc || 0, ofrt = extras?.ofrt || 0, kpfgrtd = extras?.kpfgrtd || 0;
-        const lines = [
+        const lines = [];
+        if (r.quarterFlags && r.quarterFlags[cat]) {
+            lines.push(
+                '⚠ This quarter\'s split doesn\'t fully reconcile with the 1H/2H total — likely a run',
+                '  partially negated by an untagged penalty, where the NFL credits yardage at the foul',
+                '  spot rather than this parser\'s play-by-play reading. The Full Game/1H/2H numbers',
+                '  are still correct; double-check this specific quarter value against the PDF by hand.',
+                '',
+            );
+        }
+        lines.push(
             `Passing Yards: 0.04 pts/yard (${passYd}) = ${Number((passYd * 0.04).toFixed(2))}`,
             `Passing TDs: 4 pts (${passTd}) = ${passTd * 4}`,
             `Interceptions: -1 pt (${int}) = ${int * -1}`,
@@ -2715,8 +2926,10 @@ window.onload = function () {
             `Receiving Yards: 0.1 pts/yard (${recYd}) = ${Number((recYd * 0.1).toFixed(1))}`,
             `Receiving TDs: 6 pts (${recTd}) = ${recTd * 6}`,
             `Receptions: 1 pt (${rec}) = ${rec}`,
-            `Fumbles Lost: -1 pt (${fumLost}) = ${fumLost * -1}`,
-        ];
+            isQuarterCat
+                ? `Fumbles Lost: -1 pt (not tracked per-quarter — see Full Game/1H/2H) = 0`
+                : `Fumbles Lost: -1 pt (${fumLost}) = ${fumLost * -1}`,
+        );
         if (cat === 'Full Game') {
             lines.push(
                 `2 Point Conversions: 2 pts (${twoPtc}) = ${twoPtc * 2}`,
@@ -2748,7 +2961,10 @@ window.onload = function () {
         const val = row.fs[cat];
         if (val === null || val === undefined) return '<span class="gamebook-dnp-cell">—</span>';
         const key = `${row.team}__${row.name}`;
-        return `<span class="gamebook-cell-clickable" data-key="${key}" data-cat="${cat}">${val}</span>`;
+        const flagged = row.quarterFlags && row.quarterFlags[cat];
+        const cls = flagged ? 'gamebook-cell-clickable gamebook-cell-flagged' : 'gamebook-cell-clickable';
+        const title = flagged ? ' title="⚠ Quarter split may not reconcile — click for details"' : '';
+        return `<span class="${cls}" data-key="${key}" data-cat="${cat}"${title}>${val}${flagged ? ' ⚠' : ''}</span>`;
     }
 
     function fballoGbRenderTeamTabs(rows) {
@@ -2777,7 +2993,7 @@ window.onload = function () {
 
     function fballoGbRenderResults(allRows, hasOT, activeTeam) {
         const rows = allRows.filter(r => r.team === activeTeam);
-        const cats = hasOT ? ['Full Game', '1H', '2H', 'OT', '2H+OT'] : ['Full Game', '1H', '2H'];
+        const cats = hasOT ? ['Full Game', '1H', '1Q', '2H', 'OT', '2H+OT', '4Q', '4Q+OT'] : ['Full Game', '1H', '1Q', '2H', '4Q'];
 
         fballoGbResultsHead.innerHTML = '<tr><th>Player</th>' +
             cats.map(c => `<th>${c} FS</th>`).join('') + '<th>Flags</th></tr>';
@@ -2826,7 +3042,7 @@ window.onload = function () {
 
         try {
             const buffer = await file.arrayBuffer();
-            const { rows, hasOT, foundSections } = await fballoGbParsePdf(buffer);
+            const { rows, hasOT, foundSections, foundPbp } = await fballoGbParsePdf(buffer);
             fballoGbLastRows = rows;
             fballoGbHasOT = hasOT;
 
@@ -2836,6 +3052,8 @@ window.onload = function () {
                 fballoGbMissing.textContent = `Note: could not find these sections in the PDF — ${missing.join(', ')}. Related columns may be incomplete.`;
             } else if (!foundSections.includes('2H')) {
                 fballoGbMissing.textContent = `Note: this gamebook has no separate "Second Half Summary" section — 2H was computed as Full Game minus 1H instead.`;
+            } else if (!foundPbp) {
+                fballoGbMissing.textContent = `Note: no "Play By Play" sections found — 1Q/4Q columns will be blank for every player.`;
             }
 
             const teams = [...new Set(rows.map(r => r.team))];
@@ -2844,8 +3062,10 @@ window.onload = function () {
             fballoGbRenderResults(rows, hasOT, fballoGbActiveTeam);
 
             const dnpCount = rows.filter(r => r.dnp).length;
+            const flaggedCount = rows.filter(r => r.quarterFlags && Object.keys(r.quarterFlags).length).length;
             fballoGbSetStatus(
-                `Parsed ${rows.length - dnpCount} player(s)${dnpCount ? ` (${dnpCount} DNP)` : ''} from ${foundSections.length} section(s)${hasOT ? ' (game went to OT)' : ''}. Click any FS value for its breakdown.`,
+                `Parsed ${rows.length - dnpCount} player(s)${dnpCount ? ` (${dnpCount} DNP)` : ''} from ${foundSections.length} section(s)${hasOT ? ' (game went to OT)' : ''}.` +
+                `${flaggedCount ? ` ${flaggedCount} player(s) have a flagged quarter split (⚠) — click for details.` : ''} Click any FS value for its breakdown.`,
                 'success'
             );
             fballoGbResultsWrap.style.display = 'block';
