@@ -1032,6 +1032,48 @@ a.popover-btn { padding: 0 0 0 6px; }
   border-color: #ff6b6b;
   cursor: help;
 }
+.soccerdnp-starter {
+  color: var(--green);
+  border-color: var(--green);
+}
+.soccerdnp-sub-dnp {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+/* ── Soccer DNP Checker — searchable match combobox ── */
+.soccerdnp-combobox {
+  position: relative;
+}
+.soccerdnp-dropdown-panel {
+  position: fixed;
+  z-index: 2000;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.soccerdnp-dropdown-item {
+  padding: 8px 12px;
+  font-size: .83rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-input);
+}
+.soccerdnp-dropdown-item:last-child { border-bottom: none; }
+.soccerdnp-dropdown-item:hover,
+.soccerdnp-dropdown-item.is-active {
+  background: var(--bg-card-hover);
+  color: var(--purple-light);
+}
+.soccerdnp-dropdown-empty {
+  padding: 10px 12px;
+  font-size: .8rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
 
 /* ── Gamebook Checker — Highlighted columns (FINAL, 1H, 2H, 1Q, 4Q) ── */
 .gamebook-table th.gamebook-col-highlight {

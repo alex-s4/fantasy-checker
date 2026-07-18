@@ -568,4 +568,305 @@ window.onload = function () {
             setMlbdnpMsg('Fetch failed — the MLB API may be unreachable or blocking browser requests (CORS). ' + err.message, 'error');
         }
     });
+
+    // ============================================================
+    //  Soccer DNP Checker (live Fotmob lookup — date-based, no
+    //  player search needed)
+    //
+    //  Flow: matches?date=YYYYMMDD -> flat list of every match
+    //  worldwide that day (confirmed: ccode3/timezone params do NOT
+    //  filter results, only matches?date= is required) -> pick match
+    //  -> matchDetails?matchId={id} -> content.lineup ->
+    //  render two-team table. NOTE: lineup is a SIBLING of matchFacts
+    //  under content, not nested inside it — confirmed the hard way
+    //  after chasing a phantom CORS/proxy bug that turned out to be
+    //  this wrong path (data.content.matchFacts.lineup, always
+    //  undefined) all along.
+    //
+    //  Confirmed via testing (unlike the earlier Sofascore attempt):
+    //  fetch() to fotmob.com works directly from GitHub Pages, no
+    //  CORS block, no proxy needed.
+    //
+    // lineup.lineupType has (at least) these observed values:
+    // - "standard": confirmed actual lineup (typically finished/live matches)
+    // - "lastStartingLineups" / "predicted": PREDICTED lineup — NOT confirmed
+    //   for this fixture, shown for upcoming matches before squads are
+    //   announced. Treated identically here since no confirmed distinction
+    //   between the two is known; flag if that turns out to be wrong.
+    // - "unavailable": no lineup data at all yet.
+    // All are surfaced to the user via #soccerdnp-lineup-status so "DNP" is
+    // never presented as more certain than it is.
+    // ============================================================
+    const FOTMOB_API = 'https://www.fotmob.com/api/data';
+
+    // matches?date= is CORS-open (confirmed) and fetched directly. matchDetails
+    // is NOT (confirmed: "No Access-Control-Allow-Origin header" from
+    // alex-s4.github.io — a passive omission, not active bot-blocking like
+    // Sofascore's Sec-Fetch-Site rejection) so it's routed through
+    // corsproxy.io. TEMPORARY per Alex — revisit if this proves unreliable,
+    // same as the earlier Sofascore proxy attempt.
+    const CORS_PROXY = 'https://corsproxy.io/?url=';
+    function fotmobDetailsFetch(url) {
+        return fetch(CORS_PROXY + encodeURIComponent(url));
+    }
+
+    const soccerdnpHeaderEl      = document.querySelector('#head-soccerdnp');
+    const soccerdnpDateInput     = document.querySelector('#soccerdnp-date');
+    const soccerdnpLoadGamesBtn  = document.querySelector('#soccerdnp-load-games-btn');
+    const soccerdnpGameRow       = document.querySelector('#soccerdnp-game-row');
+    const soccerdnpGameSearch    = document.querySelector('#soccerdnp-game-search');
+    const soccerdnpGamePanel     = document.querySelector('#soccerdnp-game-panel');
+    const soccerdnpFetchMsg      = document.querySelector('#soccerdnp-fetch-msg');
+    const soccerdnpLineupStatus  = document.querySelector('#soccerdnp-lineup-status');
+    const soccerdnpTeamTabs      = document.querySelector('#soccerdnp-team-tabs');
+    const soccerdnpResultsWrap   = document.querySelector('#soccerdnp-results-wrap');
+    const soccerdnpResultsHead   = document.querySelector('#soccerdnp-results-head');
+    const soccerdnpResultsBody   = document.querySelector('#soccerdnp-results-body');
+
+    // The card body (and the card itself) use overflow:hidden for the
+    // collapse-animation and rounded corners — that clips any child that
+    // visually extends past the card's edge, which broke the dropdown panel.
+    // Detaching it to <body> with position:fixed sidesteps that entirely; its
+    // screen position is then recalculated from soccerdnpGameSearch's actual
+    // bounding rect every time it's shown/scrolled/resized.
+    document.body.appendChild(soccerdnpGamePanel);
+
+    function positionSoccerDnpPanel() {
+        const rect = soccerdnpGameSearch.getBoundingClientRect();
+        soccerdnpGamePanel.style.top = (rect.bottom + 4) + 'px';
+        soccerdnpGamePanel.style.left = rect.left + 'px';
+        soccerdnpGamePanel.style.width = rect.width + 'px';
+    }
+
+    soccerdnpHeaderEl.addEventListener('click', () => toggleSection('#content-soccerdnp'));
+
+    // Default to the browser's local date (soccer is global — unlike the
+    // MLB/NBA cards above, there's no single "home" timezone to default to).
+    (function initSoccerDnpDate() {
+        const d = new Date();
+        const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        soccerdnpDateInput.value = local;
+    })();
+
+    function setSoccerDnpMsg(msg, type = '') {
+        soccerdnpFetchMsg.textContent = msg;
+        soccerdnpFetchMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    let soccerdnpMatchesCache   = {}; // matchId -> flattened match object (from the date list)
+    let soccerdnpAllOptions     = []; // full {id,label} list for the loaded date
+    let soccerdnpSelectedMatch  = null; // the currently chosen {id,label}, or null
+    let soccerdnpLineup         = null; // last-fetched content.lineup
+    let soccerdnpActiveSide     = null; // 'homeTeam' | 'awayTeam'
+    let soccerdnpTeamNames      = { homeTeam: '', awayTeam: '' };
+
+    /** Renders the dropdown panel's item list, filtered by query (case-insensitive substring match against each option's label). Does not touch the search input's own value. */
+    function renderSoccerDnpPanel(query) {
+        const q = query.trim().toLowerCase();
+        const filtered = q
+            ? soccerdnpAllOptions.filter(o => o.label.toLowerCase().includes(q))
+            : soccerdnpAllOptions;
+
+        soccerdnpGamePanel.innerHTML = filtered.length
+            ? filtered.map(o =>
+                `<div class="soccerdnp-dropdown-item" data-id="${o.id}">${o.label}</div>`
+              ).join('')
+            : '<div class="soccerdnp-dropdown-empty">No matches found.</div>';
+        positionSoccerDnpPanel();
+        soccerdnpGamePanel.style.display = 'block';
+    }
+
+    function hideSoccerDnpPanel() {
+        soccerdnpGamePanel.style.display = 'none';
+    }
+
+    // Keep the (now-detached, fixed-position) panel aligned with the search
+    // box if the page scrolls or resizes while it's open. capture:true on
+    // scroll so this also fires for scrolling inside any ancestor container,
+    // not just the window itself.
+    window.addEventListener('scroll', () => {
+        if (soccerdnpGamePanel.style.display === 'block') positionSoccerDnpPanel();
+    }, true);
+    window.addEventListener('resize', () => {
+        if (soccerdnpGamePanel.style.display === 'block') positionSoccerDnpPanel();
+    });
+
+    // Opening: focusing the box (before typing) shows the FULL list, not
+    // filtered by whatever label text is currently sitting in the input from
+    // a prior selection — that would otherwise filter down to just itself.
+    soccerdnpGameSearch.addEventListener('focus', () => {
+        if (soccerdnpAllOptions.length === 0) return;
+        soccerdnpGameSearch.select(); // next keystroke replaces the old label instead of appending
+        renderSoccerDnpPanel('');
+    });
+    soccerdnpGameSearch.addEventListener('input', () => {
+        renderSoccerDnpPanel(soccerdnpGameSearch.value);
+    });
+
+    // Click-to-select (event delegation — the panel's contents are fully
+    // replaced on every render, so a single listener on the stable parent
+    // is used rather than binding one per item).
+    soccerdnpGamePanel.addEventListener('mousedown', (e) => {
+        // mousedown (not click) so this fires before the input's blur event
+        // would otherwise close the panel first and swallow the click.
+        const item = e.target.closest('.soccerdnp-dropdown-item');
+        if (!item) return;
+        e.preventDefault();
+        const matchId = item.dataset.id;
+        const option = soccerdnpAllOptions.find(o => String(o.id) === matchId);
+        if (!option) return;
+
+        soccerdnpSelectedMatch = option;
+        soccerdnpGameSearch.value = option.label;
+        hideSoccerDnpPanel();
+        soccerdnpLoadLineup(matchId);
+    });
+
+    // Click outside the combobox (input OR the now-detached panel) closes it.
+    document.addEventListener('click', (e) => {
+        if (!soccerdnpGameRow.contains(e.target) && !soccerdnpGamePanel.contains(e.target)) {
+            hideSoccerDnpPanel();
+        }
+    });
+    soccerdnpGameSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { hideSoccerDnpPanel(); soccerdnpGameSearch.blur(); }
+    });
+
+    async function loadSoccerDnpGames() {
+        const dateVal = soccerdnpDateInput.value; // YYYY-MM-DD
+        if (!dateVal) { setSoccerDnpMsg('Pick a date first.', 'error'); return; }
+        const dateParam = dateVal.replace(/-/g, ''); // Fotmob wants YYYYMMDD
+
+        soccerdnpLoadGamesBtn.disabled = true;
+        soccerdnpGameRow.style.display = 'none';
+        hideSoccerDnpPanel();
+        soccerdnpGameSearch.value = '';
+        soccerdnpSelectedMatch = null;
+        soccerdnpTeamTabs.style.display = 'none';
+        soccerdnpResultsWrap.style.display = 'none';
+        soccerdnpLineupStatus.style.display = 'none';
+        setSoccerDnpMsg('Loading matches…', 'loading');
+
+        try {
+            const res = await fetch(`${FOTMOB_API}/matches?date=${dateParam}`);
+            if (!res.ok) throw new Error('matches request failed');
+            const data = await res.json();
+            const leagues = data.leagues || [];
+
+            soccerdnpMatchesCache = {};
+            const options = [];
+            leagues.forEach(league => {
+                (league.matches || []).forEach(m => {
+                    soccerdnpMatchesCache[m.id] = m;
+                    options.push({ id: m.id, label: `${league.name}: ${m.home.name} vs ${m.away.name} (${m.time})` });
+                });
+            });
+
+            if (options.length === 0) {
+                setSoccerDnpMsg(`No matches found on ${dateVal}.`, 'error');
+                return;
+            }
+
+            soccerdnpAllOptions = options;
+            soccerdnpGameSearch.placeholder = `Search ${options.length} matches…`;
+            soccerdnpGameRow.style.display = 'flex';
+            setSoccerDnpMsg(`Found ${options.length} match(es) on ${dateVal}. Click the box above to search.`, 'success');
+        } catch (err) {
+            setSoccerDnpMsg('Fetch failed — Fotmob may be unreachable. ' + err.message, 'error');
+        } finally {
+            soccerdnpLoadGamesBtn.disabled = false;
+        }
+    }
+    soccerdnpLoadGamesBtn.addEventListener('click', loadSoccerDnpGames);
+
+    const SOCCERDNP_LINEUP_STATUS_TEXT = {
+        standard: { msg: 'Confirmed lineup.', type: 'success' },
+        lastStartingLineups: { msg: '⚠ Predicted lineup only — carried over from each team\'s last match, not yet confirmed for this fixture. Actual starters may differ once squads are announced.', type: '' },
+        predicted: { msg: '⚠ Predicted lineup only — not yet confirmed for this fixture. Actual starters may differ once squads are announced.', type: '' },
+        unavailable: { msg: 'Lineup not available for this match yet.', type: 'error' },
+    };
+
+    async function soccerdnpLoadLineup(matchId) {
+        soccerdnpTeamTabs.style.display = 'none';
+        soccerdnpResultsWrap.style.display = 'none';
+        soccerdnpLineupStatus.style.display = 'none';
+
+        setSoccerDnpMsg('Loading lineups…', 'loading');
+        try {
+            const res = await fotmobDetailsFetch(`${FOTMOB_API}/matchDetails?matchId=${matchId}`);
+            // Stale-response guard: the proxy adds unpredictable latency, so if
+            // the user has since picked a different match, this response is
+            // outdated — drop it instead of overwriting the newer selection's
+            // (possibly still-loading) result.
+            if (!soccerdnpSelectedMatch || String(soccerdnpSelectedMatch.id) !== matchId) return;
+            if (!res.ok) throw new Error('matchDetails request failed');
+            const data = await res.json();
+            if (!soccerdnpSelectedMatch || String(soccerdnpSelectedMatch.id) !== matchId) return;
+            const lineup = data.content?.lineup;
+
+            const statusKey = lineup?.lineupType || 'unavailable';
+            const statusInfo = SOCCERDNP_LINEUP_STATUS_TEXT[statusKey] || SOCCERDNP_LINEUP_STATUS_TEXT.unavailable;
+            soccerdnpLineupStatus.textContent = statusInfo.msg;
+            soccerdnpLineupStatus.className = 'manual-note' + (statusInfo.type ? ' fetch-msg--' + statusInfo.type : '');
+            soccerdnpLineupStatus.style.display = 'block';
+
+            if (!lineup || statusKey === 'unavailable' || !lineup.homeTeam || !lineup.awayTeam) {
+                setSoccerDnpMsg('No lineup data to show for this match.', 'error');
+                soccerdnpLineup = null;
+                return;
+            }
+
+            soccerdnpLineup = lineup;
+            soccerdnpTeamNames = { homeTeam: lineup.homeTeam.name, awayTeam: lineup.awayTeam.name };
+            soccerdnpActiveSide = 'homeTeam';
+
+            renderSoccerDnpTeamTabs();
+            renderSoccerDnpResults();
+            setSoccerDnpMsg(`${soccerdnpTeamNames.awayTeam} @ ${soccerdnpTeamNames.homeTeam} — loaded.`, 'success');
+        } catch (err) {
+            setSoccerDnpMsg('Fetch failed — Fotmob may be unreachable. ' + err.message, 'error');
+        }
+    }
+
+    function renderSoccerDnpTeamTabs() {
+        const sides = ['homeTeam', 'awayTeam'];
+        soccerdnpTeamTabs.innerHTML = sides.map(side =>
+            `<label class="round-pill" style="width:49%">
+                <input type="radio" name="soccerdnp-team-tab" value="${side}" ${side === soccerdnpActiveSide ? 'checked' : ''}> ${soccerdnpTeamNames[side]}
+             </label>`
+        ).join('');
+        soccerdnpTeamTabs.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                soccerdnpActiveSide = radio.value;
+                renderSoccerDnpResults();
+            });
+        });
+        soccerdnpTeamTabs.style.display = 'flex';
+    }
+
+    function renderSoccerDnpResults() {
+        if (!soccerdnpLineup) return;
+        const side = soccerdnpLineup[soccerdnpActiveSide];
+        const starters = side?.starters || [];
+        const subs = side?.subs || [];
+
+        soccerdnpResultsHead.innerHTML = '<tr><th>#</th><th>Player</th><th>Remarks</th></tr>';
+
+        const starterRows = starters.map(p => soccerdnpPlayerRow(p, false));
+        const subRows = subs.map(p => soccerdnpPlayerRow(p, true));
+        soccerdnpResultsBody.innerHTML = starterRows.concat(subRows).join('');
+
+        soccerdnpResultsWrap.style.display = 'block';
+    }
+
+    function soccerdnpPlayerRow(p, isDnp) {
+        const remarks = isDnp
+            ? '<span class="manual-badge soccerdnp-sub-dnp">Sub/DNP</span>'
+            : '<span class="manual-badge soccerdnp-starter">Starter</span>';
+        return `<tr>
+            <td>#${p.shirtNumber || '-'}</td>
+            <td>${p.name || '—'}</td>
+            <td>${remarks}</td>
+        </tr>`;
+    }
 };
