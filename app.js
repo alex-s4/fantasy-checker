@@ -104,7 +104,7 @@ window.onload = function () {
         }).format(new Date());
     }
     const todayET = getTodayEasternDateStr();
-    ['#bball-date', '#bsballh-date', '#bsballp-date', '#fballo-date'].forEach(sel => {
+    ['#bball-date', '#bsballh-date', '#bsballp-date', '#fballo-date', '#bball-gb-lookup-date', '#fballo-gb-lookup-date'].forEach(sel => {
         const el = document.querySelector(sel);
         if (el) el.value = todayET;
     });
@@ -599,6 +599,142 @@ window.onload = function () {
         bballGbHasOT = false;
         bballGbActiveTeam = null;
         bballGbSetStatus('', '');
+    });
+
+    // ── Basketball Gamebook — "Find the Game Book" lookup ──────────
+    // Ported/adapted from a companion project ("Box Score Fetcher") that
+    // generates box-score links. Here it's scoped down to one job: list
+    // every NBA/WNBA game on a date (via ESPN's scoreboard), then construct
+    // the official statsdmz.nba.com Game Book PDF URL for whichever one is picked.
+    //
+    // IMPORTANT — this is a LINK, not an auto-fetch. statsdmz.nba.com blocks
+    // direct browser fetch() (confirmed via live CORS test), and public CORS
+    // proxies (corsproxy.io, allorigins.win, codetabs.com — all tested live)
+    // failed too. So the PDF still has to be opened, saved, and dropped into
+    // the box above by hand — this just removes the manual searching step.
+    //
+    // FRAGILE BY NATURE: the URL pattern below is NBA's current (as of this
+    // build) statsdmz.nba.com convention, confirmed against real 2025/2026
+    // gamebook PDFs — but it's not a documented/versioned API. NBA can change
+    // the host, path, or filename format at any time with no warning, which
+    // would silently break every link here. If links start 404ing across the
+    // board (not just for one team), that's the likely cause — worth
+    // periodically re-confirming the pattern against a fresh real PDF.
+    //
+    // ESPN's team abbreviations also don't always match NBA's own tricodes
+    // used in the filename (e.g. ESPN "NY" vs NBA "NYK" for the Knicks). The
+    // table below is the best-known mapping, ported from the companion
+    // project, but hasn't been exhaustively verified for every team/era —
+    // and because of the CORS block above, there's no way to verify a
+    // constructed URL resolves before a human actually clicks it.
+    const ESPN_TO_NBA_TRICODE = {
+        NO: 'NOP', NY: 'NYK', GS: 'GSW', SA: 'SAS', UTAH: 'UTA', PHX: 'PHO', WSH: 'WAS',
+    };
+    const ESPN_TO_WNBA_TRICODE = {
+        LV: 'LVA', LA: 'LAS', NY: 'NYL', PHX: 'PHO', WSH: 'WAS',
+    };
+    function toNbaTricode(espnAbbr) {
+        const up = (espnAbbr || '').toUpperCase();
+        return ESPN_TO_NBA_TRICODE[up] || up;
+    }
+    function toWnbaTricode(espnAbbr) {
+        const up = (espnAbbr || '').toUpperCase();
+        return ESPN_TO_WNBA_TRICODE[up] || up;
+    }
+
+    const bballGbLookupDate     = document.querySelector('#bball-gb-lookup-date');
+    const bballGbLookupLoadBtn  = document.querySelector('#bball-gb-lookup-load-btn');
+    const bballGbLookupMsg      = document.querySelector('#bball-gb-lookup-msg');
+    const bballGbLookupGameRow  = document.querySelector('#bball-gb-lookup-game-row');
+    const bballGbLookupGameSel  = document.querySelector('#bball-gb-lookup-game-select');
+    const bballGbLookupResult   = document.querySelector('#bball-gb-lookup-result');
+    const bballGbLookupMatchup  = document.querySelector('#bball-gb-lookup-matchup');
+    const bballGbLookupLink     = document.querySelector('#bball-gb-lookup-link');
+
+    function setBballGbLookupMsg(msg, type = '') {
+        bballGbLookupMsg.textContent = msg;
+        bballGbLookupMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    // event.id isn't guaranteed unique ACROSS leagues (just within one), so games
+    // are cached/selected by a composite "league__eventId" key.
+    let bballGbLookupGamesCache = {}; // key -> { league, label, tricodeFn, home, away }
+
+    async function bballGbLoadGames() {
+        const date = bballGbLookupDate.value;
+        if (!date) { setBballGbLookupMsg('Pick a date first.', 'error'); return; }
+
+        bballGbLookupGameRow.style.display = 'none';
+        bballGbLookupGameSel.innerHTML = '<option value="">Select a game…</option>';
+        bballGbLookupResult.style.display = 'none';
+        bballGbLookupLoadBtn.disabled = true;
+        bballGbLookupGamesCache = {};
+        setBballGbLookupMsg('Loading NBA and WNBA games…', 'loading');
+
+        const dateNoSep = date.replaceAll('-', '');
+        const leagues = [
+            { id: 'nba', label: 'NBA', tricodeFn: toNbaTricode },
+            { id: 'wnba', label: 'WNBA', tricodeFn: toWnbaTricode },
+        ];
+
+        try {
+            const optionGroups = [];
+
+            for (const { id, label, tricodeFn } of leagues) {
+                const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/${id}/scoreboard?dates=${dateNoSep}`);
+                if (!res.ok) continue;
+                const data = await res.json();
+                const events = data.events || [];
+                if (events.length === 0) continue;
+
+                const options = [];
+                for (const event of events) {
+                    const competitors = event.competitions?.[0]?.competitors || [];
+                    const home = competitors.find(c => c.homeAway === 'home');
+                    const away = competitors.find(c => c.homeAway === 'away');
+                    if (!home || !away) continue;
+
+                    const key = `${id}__${event.id}`;
+                    bballGbLookupGamesCache[key] = { league: id, label, tricodeFn, home, away };
+                    options.push(`<option value="${key}">${away.team.displayName} @ ${home.team.displayName}</option>`);
+                }
+                if (options.length > 0) optionGroups.push(`<optgroup label="${label}">${options.join('')}</optgroup>`);
+            }
+
+            if (optionGroups.length === 0) {
+                setBballGbLookupMsg(`No NBA or WNBA games found on ${date}.`, 'error');
+                return;
+            }
+
+            bballGbLookupGameSel.innerHTML = '<option value="">Select a game…</option>' + optionGroups.join('');
+            bballGbLookupGameRow.style.display = 'flex';
+            setBballGbLookupMsg(`Found ${Object.keys(bballGbLookupGamesCache).length} game(s) on ${date}.`, 'success');
+        } catch (err) {
+            setBballGbLookupMsg(
+                'Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message,
+                'error'
+            );
+        } finally {
+            bballGbLookupLoadBtn.disabled = false;
+        }
+    }
+    bballGbLookupLoadBtn.addEventListener('click', bballGbLoadGames);
+
+    bballGbLookupGameSel.addEventListener('change', () => {
+        const key = bballGbLookupGameSel.value;
+        bballGbLookupResult.style.display = 'none';
+        if (!key || !bballGbLookupGamesCache[key]) return;
+
+        const { label, tricodeFn, home, away } = bballGbLookupGamesCache[key];
+        const dateNoSep = bballGbLookupDate.value.replaceAll('-', '');
+        const homeTricode = tricodeFn(home.team.abbreviation);
+        const awayTricode = tricodeFn(away.team.abbreviation);
+        const pdfUrl = `https://statsdmz.nba.com/pdfs/${dateNoSep}/${dateNoSep}_${awayTricode}${homeTricode}_book.pdf`;
+
+        const scoreLine = (home.score != null && away.score != null) ? ` — ${away.score}-${home.score}` : '';
+        bballGbLookupMatchup.textContent = `${label}: ${away.team.displayName} @ ${home.team.displayName}${scoreLine}`;
+        bballGbLookupLink.href = pdfUrl;
+        bballGbLookupResult.style.display = 'block';
     });
 
     // ── Basketball — Auto-fill from ESPN (NBA) — Name Search mode ─
@@ -2533,160 +2669,6 @@ window.onload = function () {
     }
 
     /** Top-level: parse an uploaded NFL Game Summary PDF into the per-player, per-team, per-category table. */
-    // ============================================================
-    //  Play-by-play quarter-level parser (1Q/2Q/3Q/4Q/OT).
-    //
-    //  There's no per-quarter box score in these PDFs (only Full Game,
-    //  1H, and sometimes 2H/OT), so 1Q/2Q/3Q/4Q have to come from
-    //  reading the actual play-by-play text and attributing each play
-    //  to a passer/rusher/receiver. Validated against 5 real gamebooks
-    //  (346-plus/347 individual ATT/CMP/YDS/TD checks passed — see
-    //  build notes). One known limitation: a run partially negated by
-    //  an *untagged* offensive-holding penalty (no "No Play" text) is
-    //  credited by the NFL at the foul spot, a yardage adjustment this
-    //  parser can't recover from the play text alone. When a player's
-    //  1Q+2Q or 3Q+4Q sum doesn't reconcile with the (box-score-derived,
-    //  trustworthy) 1H/2H total, the affected quarter cells are flagged
-    //  rather than silently shown — see fballoGbReconcileQuarters.
-    // ============================================================
-    const FBALLOGB_PBP_NAME = "[A-Z]\\.[A-Za-z'-]+";
-    function fballoGbYd(s) { return s === 'no' ? 0 : Number(s); }
-    const FBALLOGB_YD_TOKEN = '(-?\\d+|no) (?:yards?|gain)';
-
-    function fballoGbIsNegatedByPenalty(lines, i) {
-        let j = i + 1;
-        while (j < lines.length && /^(PENALTY|Penalty) on/.test(lines[j])) {
-            if (/No Play/.test(lines[j])) return true;
-            j++;
-        }
-        return false;
-    }
-    function fballoGbIsNegatedByReversal(lines, i) {
-        for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-            if (/^\d+-\d+-/.test(lines[j])) return false; // hit the next down marker first
-            if (/the play was REVERSED/.test(lines[j])) return true;
-        }
-        return false;
-    }
-    function fballoGbIsNegated(lines, i) {
-        return fballoGbIsNegatedByPenalty(lines, i) || fballoGbIsNegatedByReversal(lines, i);
-    }
-
-    /** Parse one quarter/OT period's play-by-play lines into per-player {passAtt,passCmp,passYd,passTd,passInt,rushAtt,rushYd,rushTd,rec,recYd,recTd}. */
-    function fballoGbParseQuarterPlays(lines) {
-        const stats = {};
-        function get(name) {
-            if (!stats[name]) stats[name] = { passAtt: 0, passCmp: 0, passYd: 0, passTd: 0, passInt: 0, rushAtt: 0, rushYd: 0, rushTd: 0, rec: 0, recYd: 0, recTd: 0 };
-            return stats[name];
-        }
-        const NAME = FBALLOGB_PBP_NAME, YD_TOKEN = FBALLOGB_YD_TOKEN;
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (/^(PENALTY|Penalty) on/.test(line)) continue;
-            if (/kicks? \d+ yards| punts \d+ yards/.test(line)) continue;
-            if (/ sacked at /.test(line)) continue;
-
-            let m = line.match(new RegExp(`(${NAME}) pass .*?INTERCEPTED`));
-            if (m) { if (!fballoGbIsNegated(lines, i)) get(m[1]).passAtt++; continue; }
-
-            m = line.match(new RegExp(`(${NAME}) spiked the ball`));
-            if (m) { if (!fballoGbIsNegated(lines, i)) get(m[1]).passAtt++; continue; }
-
-            m = line.match(new RegExp(`(${NAME}) pass incomplete`));
-            if (m) { if (!fballoGbIsNegated(lines, i)) get(m[1]).passAtt++; continue; }
-
-            m = line.match(new RegExp(`(${NAME}) pass (?:(?:short|deep) (?:left|right|middle) )?to (${NAME}) .*?for ${YD_TOKEN}(, TOUCHDOWN)?`));
-            if (m) {
-                if (!fballoGbIsNegated(lines, i)) {
-                    const passer = get(m[1]), receiver = get(m[2]);
-                    const y = fballoGbYd(m[3]), td = !!m[4];
-                    passer.passAtt++; passer.passCmp++; passer.passYd += y; if (td) passer.passTd++;
-                    receiver.rec++; receiver.recYd += y; if (td) receiver.recTd++;
-                }
-                continue;
-            }
-
-            m = line.match(new RegExp(`(${NAME}) scrambles .*?(?:to|at) [\\w ]+ for ${YD_TOKEN}(, TOUCHDOWN)?`));
-            if (m) {
-                if (!fballoGbIsNegated(lines, i)) { const p = get(m[1]); p.rushAtt++; p.rushYd += fballoGbYd(m[2]); if (m[3]) p.rushTd++; }
-                continue;
-            }
-
-            m = line.match(new RegExp(`(${NAME}) kneels to [\\w ]+ for ${YD_TOKEN}`));
-            if (m) {
-                if (!fballoGbIsNegated(lines, i)) { const p = get(m[1]); p.rushAtt++; p.rushYd += fballoGbYd(m[2]); }
-                continue;
-            }
-
-            // Aborted snap (botched shotgun exchange) — credited as a 0-yard rush attempt.
-            m = line.match(new RegExp(`(${NAME}) FUMBLES \\(Aborted\\)`));
-            if (m) {
-                if (!fballoGbIsNegated(lines, i)) { const p = get(m[1]); p.rushAtt++; }
-                continue;
-            }
-
-            const rushRe = new RegExp(`(${NAME}) (?:left|right|up|down) (?:tackle|guard|end|the middle) .*?for ${YD_TOKEN}(, TOUCHDOWN)?`, 'g');
-            let lastRush = null, rm;
-            while ((rm = rushRe.exec(line))) lastRush = rm;
-            if (lastRush) {
-                if (!fballoGbIsNegated(lines, i)) { const p = get(lastRush[1]); p.rushAtt++; p.rushYd += fballoGbYd(lastRush[2]); if (lastRush[3]) p.rushTd++; }
-                continue;
-            }
-        }
-        return stats;
-    }
-
-    /** Convert one player's parsed play-by-play stats into the same {rushing,passing,receiving} shape used by the box-score parser (fumbles isn't tracked from play text — Full Game/1H/2H fumbles-lost, which come from the box score, remain the source of truth). */
-    function fballoGbPbpToRawCat(s) {
-        if (!s) return { rushing: null, passing: null, receiving: null, fumbles: null };
-        return {
-            rushing:   s.rushAtt ? { att: s.rushAtt, yds: s.rushYd, td: s.rushTd } : null,
-            passing:   s.passAtt ? { att: s.passAtt, cmp: s.passCmp, yds: s.passYd, td: s.passTd, int: s.passInt } : null,
-            receiving: s.rec     ? { rec: s.rec, yds: s.recYd, td: s.recTd } : null,
-            fumbles:   null,
-        };
-    }
-
-    /** Split the full play-by-play text into 1Q/2Q/3Q/4Q/OT per-player stat maps. */
-    function fballoGbExtractQuarterStats(allLines) {
-        const labels = [
-            ['1Q', 'Play By Play First Quarter'],
-            ['2Q', 'Play By Play Second Quarter'],
-            ['3Q', 'Play By Play Third Quarter'],
-            ['4Q', 'Play By Play Fourth Quarter'],
-            ['pbpOT', 'Play By Play Overtime'],
-        ];
-        const out = {};
-        labels.forEach(([key, marker]) => {
-            const idx = allLines.findIndex(l => l.startsWith(marker));
-            if (idx === -1) return;
-            let end = allLines.length;
-            for (let j = idx + 1; j < allLines.length; j++) {
-                if (/^Play By Play|^Miscellaneous Statistics Report/.test(allLines[j])) { end = j; break; }
-            }
-            out[key] = fballoGbParseQuarterPlays(allLines.slice(idx + 1, end));
-        });
-        return out;
-    }
-
-    /** Does the combined 1Q+2Q (or 3Q+4Q) yardage/TD/attempt total match the trustworthy box-score-derived half total? Returns true if it reconciles. */
-    function fballoGbReconcileQuarters(qA, qB, halfBox) {
-        function add(a, b) { return (a || 0) + (b || 0); }
-        const checks = [
-            [add(qA.rushing?.att, qB.rushing?.att), halfBox.rushing?.att || 0],
-            [add(qA.rushing?.yds, qB.rushing?.yds), halfBox.rushing?.yds || 0],
-            [add(qA.rushing?.td,  qB.rushing?.td),  halfBox.rushing?.td  || 0],
-            [add(qA.passing?.att, qB.passing?.att), halfBox.passing?.att || 0],
-            [add(qA.passing?.cmp, qB.passing?.cmp), halfBox.passing?.cmp || 0],
-            [add(qA.passing?.yds, qB.passing?.yds), halfBox.passing?.yds || 0],
-            [add(qA.passing?.td,  qB.passing?.td),  halfBox.passing?.td  || 0],
-            [add(qA.receiving?.rec, qB.receiving?.rec), halfBox.receiving?.rec || 0],
-            [add(qA.receiving?.yds, qB.receiving?.yds), halfBox.receiving?.yds || 0],
-            [add(qA.receiving?.td,  qB.receiving?.td),  halfBox.receiving?.td  || 0],
-        ];
-        return checks.every(([a, b]) => a === b);
-    }
-
     async function fballoGbParsePdf(arrayBuffer) {
         const doc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const pageLines = [];
@@ -2722,18 +2704,6 @@ window.onload = function () {
 
         const hasOT = !!sectionTeams['OT'];
 
-        // Play-by-play-derived 1Q/2Q/3Q/4Q(/OT) stats, attributed to a team via roster lookup.
-        const quarterStatsRaw = fballoGbExtractQuarterStats(allLines);
-        const quarterStatsByTeam = {}; // { '1Q': { team: { name: pbpStatsObj } }, ... }
-        Object.entries(quarterStatsRaw).forEach(([qkey, playerMap]) => {
-            quarterStatsByTeam[qkey] = {};
-            teamNames.forEach(t => { quarterStatsByTeam[qkey][t] = {}; });
-            Object.entries(playerMap).forEach(([name, stats]) => {
-                const team = teamNames.find(t => rosterByTeam[t] && rosterByTeam[t].has(name)) || teamNames[0];
-                quarterStatsByTeam[qkey][team][name] = stats;
-            });
-        });
-
         // Build one row per player per team.
         const rows = [];
         teamNames.forEach(team => {
@@ -2749,7 +2719,7 @@ window.onload = function () {
                 const dnp = roster[team].dnpNames.has(name) && !sectionTeams['Full Game'][team].rushing[name]
                     && !sectionTeams['Full Game'][team].passing[name] && !sectionTeams['Full Game'][team].receiving[name];
                 if (dnp) {
-                    rows.push({ team, name, dnp: true, warnings: [], quarterFlags: {} });
+                    rows.push({ team, name, dnp: true, warnings: [] });
                     return;
                 }
 
@@ -2793,38 +2763,11 @@ window.onload = function () {
                     };
                 }
 
-                // 1Q/2Q/3Q/4Q from the play-by-play parser.
-                const quarterFlags = {};
-                ['1Q', '2Q', '3Q', '4Q'].forEach(qkey => {
-                    raw[qkey] = fballoGbPbpToRawCat(quarterStatsByTeam[qkey]?.[team]?.[name]);
-                });
-                if (!fballoGbReconcileQuarters(raw['1Q'], raw['2Q'], raw['1H'])) {
-                    quarterFlags['1Q'] = quarterFlags['2Q'] = true;
-                }
-                if (!fballoGbReconcileQuarters(raw['3Q'], raw['4Q'], raw['2H'])) {
-                    quarterFlags['3Q'] = quarterFlags['4Q'] = true;
-                }
-                if (hasOT) {
-                    raw['4Q+OT'] = {
-                        rushing:   fballoGbSumCat([raw['4Q'].rushing,   raw['OT'].rushing]),
-                        passing:   fballoGbSumCat([raw['4Q'].passing,   raw['OT'].passing]),
-                        receiving: fballoGbSumCat([raw['4Q'].receiving, raw['OT'].receiving]),
-                        // 4Q (play-by-play-derived) doesn't track fumbles at all, so OT's
-                        // box-derived fumbles are the only real signal available here —
-                        // any 4Q fumble-lost stats are missing from this combined total.
-                        fumbles:   raw['OT'].fumbles || null,
-                    };
-                    if (quarterFlags['4Q']) quarterFlags['4Q+OT'] = true;
-                }
-
                 const extras = scoringInfo[name] || null;
                 const warnings = [];
                 if (extras?.warn) warnings.push(extras.warn);
-                if (quarterFlags['1Q'] || quarterFlags['3Q']) {
-                    warnings.push("Quarter split (1Q/2Q or 3Q/4Q) doesn't add up to the 1H/2H total — likely a run partially negated by an untagged penalty, where the NFL credits yardage at the foul spot rather than the play's full or zero distance. 1H/2H/Full Game totals are still correct; the flagged quarter-level numbers may be off. Verify by hand against the play-by-play.");
-                }
 
-                const cats = hasOT ? ['Full Game', '1H', '1Q', '2H', 'OT', '2H+OT', '4Q', '4Q+OT'] : ['Full Game', '1H', '1Q', '2H', '4Q'];
+                const cats = hasOT ? ['Full Game', '1H', '2H', 'OT', '2H+OT'] : ['Full Game', '1H', '2H'];
                 const fs = {};
                 cats.forEach(cat => {
                     const r = raw[cat];
@@ -2838,14 +2781,134 @@ window.onload = function () {
                     fs[cat] = fballoGbFsFromStats(r?.rushing, r?.passing, r?.receiving, r?.fumbles, catExtras);
                 });
 
-                rows.push({ team, name, dnp: false, raw, extras, fs, warnings, quarterFlags });
+                rows.push({ team, name, dnp: false, raw, extras, fs, warnings });
             });
         });
 
         rows.sort((a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name));
-        const foundPbp = Object.keys(quarterStatsRaw).length > 0;
-        return { rows, hasOT, foundSections, roster, foundPbp };
+        return { rows, hasOT, foundSections, roster };
     }
+
+    // ── NFL Gamebook — "Find the Game" lookup ──────────
+    // Unlike Basketball's version, this can ONLY get you to the NFL.com recap
+    // page, not the actual Game Book PDF. Confirmed via live testing: the PDF
+    // lives at a random Cloudinary URL (e.g. static.www.nfl.com/.../<uuid>.pdf)
+    // that's only discoverable by reading the recap page's HTML — and that page
+    // itself is CORS-blocked for direct browser fetch(), AND for three different
+    // public CORS proxies (corsproxy.io, allorigins.win, codetabs.com — all
+    // tested live against a real recap page and all failed). So there is no
+    // client-side path to the PDF link itself. This is a genuine 2-step hop:
+    // this lookup gets you to the right NFL.com page, then you click
+    // "Download Game Book (PDF)" there yourself.
+    //
+    // NFL.com's own recap page URL pattern (confirmed against real pages):
+    //   https://www.nfl.com/games/{away-nickname}-at-{home-nickname}-{year}-{seasonType}-{week}?tab=recap
+    // — also not a documented/versioned API, so it can break if NFL.com
+    // changes its URL scheme. If links start 404ing across the board, that's
+    // the likely cause.
+    function toNflComSlugSegment(name) {
+        return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+    // ESPN's season.slug values map to NFL.com's URL segments.
+    // Post-season week numbering: ESPN and NFL.com don't agree here. Confirmed
+    // live: for the Super Bowl, this app's own ESPN fetch returns week=5, but
+    // NFL.com's real page is .../post-4 (nfl.com/schedules/2025/by-week/post-4
+    // is literally titled the Super Bowl page). So ESPN's post-season week
+    // numbering appears to run one higher than NFL.com's at the far end —
+    // possibly because ESPN counts the Pro Bowl as a numbered week and NFL.com
+    // doesn't. Only this one case (week 5 → Super Bowl → NFL.com week 4) has
+    // been confirmed; Wild Card/Divisional/Conference weeks (post-season weeks
+    // 1–3) have NOT been checked against real NFL.com pages, so if one of
+    // those turns out wrong too, this may need to become a uniform -1 offset
+    // for the whole post-season rather than just this special case.
+    function toNflComPostseasonWeek(week) {
+        if (week === 5) return 4; // Super Bowl — confirmed
+        return week;
+    }
+    function toNflComSeasonType(slug) {
+        if (slug === 'regular-season') return 'reg';
+        if (slug === 'post-season') return 'post';
+        if (slug === 'pre-season') return 'pre';
+        return slug || 'reg';
+    }
+
+    const fballoGbLookupDate    = document.querySelector('#fballo-gb-lookup-date');
+    const fballoGbLookupLoadBtn = document.querySelector('#fballo-gb-lookup-load-btn');
+    const fballoGbLookupMsg     = document.querySelector('#fballo-gb-lookup-msg');
+    const fballoGbLookupGameRow = document.querySelector('#fballo-gb-lookup-game-row');
+    const fballoGbLookupGameSel = document.querySelector('#fballo-gb-lookup-game-select');
+    const fballoGbLookupResult  = document.querySelector('#fballo-gb-lookup-result');
+    const fballoGbLookupMatchup = document.querySelector('#fballo-gb-lookup-matchup');
+    const fballoGbLookupLink    = document.querySelector('#fballo-gb-lookup-link');
+
+    function setFballoGbLookupMsg(msg, type = '') {
+        fballoGbLookupMsg.textContent = msg;
+        fballoGbLookupMsg.className = 'fetch-msg' + (type ? ' fetch-msg--' + type : '');
+    }
+
+    let fballoGbLookupGamesCache = {}; // eventId -> the raw ESPN event object
+
+    async function fballoGbLoadGames() {
+        const date = fballoGbLookupDate.value;
+        if (!date) { setFballoGbLookupMsg('Pick a date first.', 'error'); return; }
+
+        fballoGbLookupGameRow.style.display = 'none';
+        fballoGbLookupGameSel.innerHTML = '<option value="">Select a game…</option>';
+        fballoGbLookupResult.style.display = 'none';
+        fballoGbLookupLoadBtn.disabled = true;
+        fballoGbLookupGamesCache = {};
+        setFballoGbLookupMsg('Loading NFL games…', 'loading');
+
+        try {
+            const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${date.replaceAll('-', '')}`);
+            if (!res.ok) throw new Error('scoreboard request failed');
+            const data = await res.json();
+            const events = data.events || [];
+
+            if (events.length === 0) {
+                setFballoGbLookupMsg(`No NFL games found on ${date}.`, 'error');
+                return;
+            }
+
+            events.forEach(ev => { fballoGbLookupGamesCache[ev.id] = ev; });
+            fballoGbLookupGameSel.innerHTML = '<option value="">Select a game…</option>' +
+                events.map(ev => `<option value="${ev.id}">${ev.shortName || ev.name}</option>`).join('');
+            fballoGbLookupGameRow.style.display = 'flex';
+            setFballoGbLookupMsg(`Found ${events.length} game(s) on ${date}.`, 'success');
+        } catch (err) {
+            setFballoGbLookupMsg(
+                'Fetch failed — the ESPN API may be unreachable or blocking browser requests (CORS). ' + err.message,
+                'error'
+            );
+        } finally {
+            fballoGbLookupLoadBtn.disabled = false;
+        }
+    }
+    fballoGbLookupLoadBtn.addEventListener('click', fballoGbLoadGames);
+
+    fballoGbLookupGameSel.addEventListener('change', () => {
+        const eventId = fballoGbLookupGameSel.value;
+        fballoGbLookupResult.style.display = 'none';
+        const event = fballoGbLookupGamesCache[eventId];
+        if (!event) return;
+
+        const competitors = event.competitions?.[0]?.competitors || [];
+        const home = competitors.find(c => c.homeAway === 'home');
+        const away = competitors.find(c => c.homeAway === 'away');
+        if (!home || !away) return;
+
+        const awaySlug = toNflComSlugSegment(away.team.name);
+        const homeSlug = toNflComSlugSegment(home.team.name);
+        const seasonType = toNflComSeasonType(event.season?.slug);
+        const week = seasonType === 'post' ? toNflComPostseasonWeek(event.week?.number) : event.week?.number;
+        const year = event.season?.year;
+        const recapUrl = `https://www.nfl.com/games/${awaySlug}-at-${homeSlug}-${year}-${seasonType}-${week}?tab=recap`;
+
+        const scoreLine = (home.score != null && away.score != null) ? ` — ${away.score}-${home.score}` : '';
+        fballoGbLookupMatchup.textContent = `${away.team.displayName} @ ${home.team.displayName}${scoreLine}`;
+        fballoGbLookupLink.href = recapUrl;
+        fballoGbLookupResult.style.display = 'block';
+    });
 
     // --- NFL Offensive Gamebook — UI wiring (mirrors Basketball's bballGb pattern) ---
     const fballoGbFileInput      = document.querySelector('#fballo-gb-file-input');
@@ -2875,21 +2938,15 @@ window.onload = function () {
         const lines = [];
         if (raw.rushing) {
             const s = raw.rushing;
-            lines.push(s.avg !== undefined
-                ? `Rushing — ATT ${s.att} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`
-                : `Rushing — ATT ${s.att} / YDS ${s.yds} / TD ${s.td} (play-by-play derived — AVG/LG not tracked per-quarter)`);
+            lines.push(`Rushing — ATT ${s.att} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`);
         }
         if (raw.passing) {
             const s = raw.passing;
-            lines.push(s.rt !== undefined
-                ? `Passing — ATT ${s.att} / CMP ${s.cmp} / YDS ${s.yds} / SK-YD ${s.sackYd} / TD ${s.td} / LG ${s.lg} / IN ${s.int} / RT ${s.rt}`
-                : `Passing — ATT ${s.att} / CMP ${s.cmp} / YDS ${s.yds} / TD ${s.td} / IN ${s.int} (play-by-play derived — SK-YD/LG/RT not tracked per-quarter)`);
+            lines.push(`Passing — ATT ${s.att} / CMP ${s.cmp} / YDS ${s.yds} / SK-YD ${s.sackYd} / TD ${s.td} / LG ${s.lg} / IN ${s.int} / RT ${s.rt}`);
         }
         if (raw.receiving) {
             const s = raw.receiving;
-            lines.push(s.avg !== undefined
-                ? `Receiving — TAR ${s.tar} / REC ${s.rec} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`
-                : `Receiving — REC ${s.rec} / YDS ${s.yds} / TD ${s.td} (play-by-play derived — TAR/AVG/LG not tracked per-quarter)`);
+            lines.push(`Receiving — TAR ${s.tar} / REC ${s.rec} / YDS ${s.yds} / AVG ${s.avg} / LG ${s.lg} / TD ${s.td}`);
         }
         if (raw.fumbles) {
             const s = raw.fumbles;
@@ -2901,23 +2958,12 @@ window.onload = function () {
     function fballoGbBreakdownLines(r, cat) {
         const raw = r.raw[cat] || {};
         const extras = cat === 'Full Game' ? r.extras : null;
-        const isQuarterCat = ['1Q', '2Q', '3Q', '4Q'].includes(cat);
         const passYd = raw.passing?.yds || 0, passTd = raw.passing?.td || 0, int = raw.passing?.int || 0;
         const rushYd = raw.rushing?.yds || 0, rushTd = raw.rushing?.td || 0;
         const recYd  = raw.receiving?.yds || 0, recTd = raw.receiving?.td || 0, rec = raw.receiving?.rec || 0;
         const fumLost = raw.fumbles?.lost || 0;
         const twoPtc = extras?.twoPtc || 0, ofrt = extras?.ofrt || 0, kpfgrtd = extras?.kpfgrtd || 0;
-        const lines = [];
-        if (r.quarterFlags && r.quarterFlags[cat]) {
-            lines.push(
-                '⚠ This quarter\'s split doesn\'t fully reconcile with the 1H/2H total — likely a run',
-                '  partially negated by an untagged penalty, where the NFL credits yardage at the foul',
-                '  spot rather than this parser\'s play-by-play reading. The Full Game/1H/2H numbers',
-                '  are still correct; double-check this specific quarter value against the PDF by hand.',
-                '',
-            );
-        }
-        lines.push(
+        const lines = [
             `Passing Yards: 0.04 pts/yard (${passYd}) = ${Number((passYd * 0.04).toFixed(2))}`,
             `Passing TDs: 4 pts (${passTd}) = ${passTd * 4}`,
             `Interceptions: -1 pt (${int}) = ${int * -1}`,
@@ -2926,10 +2972,8 @@ window.onload = function () {
             `Receiving Yards: 0.1 pts/yard (${recYd}) = ${Number((recYd * 0.1).toFixed(1))}`,
             `Receiving TDs: 6 pts (${recTd}) = ${recTd * 6}`,
             `Receptions: 1 pt (${rec}) = ${rec}`,
-            isQuarterCat
-                ? `Fumbles Lost: -1 pt (not tracked per-quarter — see Full Game/1H/2H) = 0`
-                : `Fumbles Lost: -1 pt (${fumLost}) = ${fumLost * -1}`,
-        );
+            `Fumbles Lost: -1 pt (${fumLost}) = ${fumLost * -1}`,
+        ];
         if (cat === 'Full Game') {
             lines.push(
                 `2 Point Conversions: 2 pts (${twoPtc}) = ${twoPtc * 2}`,
@@ -2961,10 +3005,7 @@ window.onload = function () {
         const val = row.fs[cat];
         if (val === null || val === undefined) return '<span class="gamebook-dnp-cell">—</span>';
         const key = `${row.team}__${row.name}`;
-        const flagged = row.quarterFlags && row.quarterFlags[cat];
-        const cls = flagged ? 'gamebook-cell-clickable gamebook-cell-flagged' : 'gamebook-cell-clickable';
-        const title = flagged ? ' title="⚠ Quarter split may not reconcile — click for details"' : '';
-        return `<span class="${cls}" data-key="${key}" data-cat="${cat}"${title}>${val}${flagged ? ' ⚠' : ''}</span>`;
+        return `<span class="gamebook-cell-clickable" data-key="${key}" data-cat="${cat}">${val}</span>`;
     }
 
     function fballoGbRenderTeamTabs(rows) {
@@ -2993,7 +3034,7 @@ window.onload = function () {
 
     function fballoGbRenderResults(allRows, hasOT, activeTeam) {
         const rows = allRows.filter(r => r.team === activeTeam);
-        const cats = hasOT ? ['Full Game', '1H', '1Q', '2H', 'OT', '2H+OT', '4Q', '4Q+OT'] : ['Full Game', '1H', '1Q', '2H', '4Q'];
+        const cats = hasOT ? ['Full Game', '1H', '2H', 'OT', '2H+OT'] : ['Full Game', '1H', '2H'];
 
         fballoGbResultsHead.innerHTML = '<tr><th>Player</th>' +
             cats.map(c => `<th>${c} FS</th>`).join('') + '<th>Flags</th></tr>';
@@ -3042,7 +3083,7 @@ window.onload = function () {
 
         try {
             const buffer = await file.arrayBuffer();
-            const { rows, hasOT, foundSections, foundPbp } = await fballoGbParsePdf(buffer);
+            const { rows, hasOT, foundSections } = await fballoGbParsePdf(buffer);
             fballoGbLastRows = rows;
             fballoGbHasOT = hasOT;
 
@@ -3052,8 +3093,6 @@ window.onload = function () {
                 fballoGbMissing.textContent = `Note: could not find these sections in the PDF — ${missing.join(', ')}. Related columns may be incomplete.`;
             } else if (!foundSections.includes('2H')) {
                 fballoGbMissing.textContent = `Note: this gamebook has no separate "Second Half Summary" section — 2H was computed as Full Game minus 1H instead.`;
-            } else if (!foundPbp) {
-                fballoGbMissing.textContent = `Note: no "Play By Play" sections found — 1Q/4Q columns will be blank for every player.`;
             }
 
             const teams = [...new Set(rows.map(r => r.team))];
@@ -3062,10 +3101,8 @@ window.onload = function () {
             fballoGbRenderResults(rows, hasOT, fballoGbActiveTeam);
 
             const dnpCount = rows.filter(r => r.dnp).length;
-            const flaggedCount = rows.filter(r => r.quarterFlags && Object.keys(r.quarterFlags).length).length;
             fballoGbSetStatus(
-                `Parsed ${rows.length - dnpCount} player(s)${dnpCount ? ` (${dnpCount} DNP)` : ''} from ${foundSections.length} section(s)${hasOT ? ' (game went to OT)' : ''}.` +
-                `${flaggedCount ? ` ${flaggedCount} player(s) have a flagged quarter split (⚠) — click for details.` : ''} Click any FS value for its breakdown.`,
+                `Parsed ${rows.length - dnpCount} player(s)${dnpCount ? ` (${dnpCount} DNP)` : ''} from ${foundSections.length} section(s)${hasOT ? ' (game went to OT)' : ''}. Click any FS value for its breakdown.`,
                 'success'
             );
             fballoGbResultsWrap.style.display = 'block';
@@ -3249,4 +3286,82 @@ window.onload = function () {
     });
     nascarCopyBtn.addEventListener('click',  () => copyBreakdown('#nascar-breakdown'));
     nascarHeaderEl.addEventListener('click', () => toggleSection('#content-nascar'));
+
+    // ── Save to History — shared across all cards ──────────────────
+    // Every mode's "Copy" button now has a matching "Save" button right next
+    // to it, driven entirely by data-sport / data-mode / data-breakdown /
+    // data-matchup / data-date attributes set in the HTML — one generic
+    // handler here instead of 16 bespoke ones. It reads whatever is
+    // currently in that mode's breakdown textarea (the same source Copy
+    // already reads from) and parses the player name + total out of the
+    // breakdown text itself, since not every mode has a dedicated
+    // player-name variable to reach into (Manual modes have no name input
+    // at all).
+    const HISTORY_STORAGE_KEY = 'gt-history';
+
+    function historyLoad() {
+        try {
+            const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }
+    function historySaveList(list) {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+    }
+
+    /** Best-effort player-name extraction from a breakdown's own header line
+     *  (buildHeader output, e.g. "LeBron James FS" or "LeBron James - 1Q FS").
+     *  Manual modes have no name input, so their breakdowns have no header —
+     *  this correctly returns '' for those rather than misreading a stat line
+     *  as a name (stat lines always contain "=", header lines never do). */
+    function historyParsePlayerName(breakdownText) {
+        const firstLine = (breakdownText.split('\n')[0] || '').trim();
+        if (/ FS$/.test(firstLine) && !firstLine.includes('=')) {
+            return firstLine.replace(/ FS$/, '').replace(/ - .*$/, '').trim();
+        }
+        return '';
+    }
+    function historyParseTotal(breakdownText) {
+        const match = breakdownText.match(/TOTAL FS = (-?[\d.]+)/);
+        return match ? Number(match[1]) : null;
+    }
+
+    document.querySelectorAll('.history-save-btn').forEach(btn => {
+        const originalHtml = btn.innerHTML;
+        btn.addEventListener('click', () => {
+            const breakdownSel = btn.dataset.breakdown;
+            const breakdownEl = breakdownSel ? document.querySelector(breakdownSel) : null;
+            const breakdownText = breakdownEl ? breakdownEl.value : '';
+
+            if (!breakdownText.trim()) {
+                btn.innerHTML = 'Nothing to save yet';
+                setTimeout(() => { btn.innerHTML = originalHtml; }, 1500);
+                return;
+            }
+
+            const matchupEl = btn.dataset.matchup ? document.querySelector(btn.dataset.matchup) : null;
+            const dateEl    = btn.dataset.date ? document.querySelector(btn.dataset.date) : null;
+
+            const entry = {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                savedAt: new Date().toISOString(),
+                sport: btn.dataset.sport || '',
+                mode: btn.dataset.mode || '',
+                playerName: historyParsePlayerName(breakdownText),
+                date: dateEl ? dateEl.value : '',
+                matchup: matchupEl ? matchupEl.textContent.trim() : '',
+                total: historyParseTotal(breakdownText),
+                breakdownText,
+            };
+
+            const list = historyLoad();
+            list.push(entry);
+            historySaveList(list);
+
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved!';
+            setTimeout(() => { btn.innerHTML = originalHtml; }, 1500);
+        });
+    });
 }; // end window.onload

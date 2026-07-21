@@ -896,6 +896,21 @@ a.popover-btn { padding: 0 0 0 6px; }
   vertical-align: middle;
 }
 
+.manual-book {
+  display: inline-block;
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: rgb(0, 255, 55);
+  background: var(--bg-input);
+  border: 1px solid rgb(0, 255, 55);
+  border-radius: 4px;
+  padding: 3px 5px;
+  margin-left: .4rem;
+  vertical-align: middle;
+}
+
 .manual-note {
   font-size: .72rem;
   color: var(--text-muted);
@@ -1002,11 +1017,6 @@ a.popover-btn { padding: 0 0 0 6px; }
   color: #fff !important;
   font-weight: 600;
 }
-.gamebook-cell-flagged {
-  color: #ff6b6b;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-}
 
 /* ── Gamebook Checker — Flag badges (reuses .manual-badge base) ── */
 .gamebook-flag-dnp {
@@ -1022,48 +1032,6 @@ a.popover-btn { padding: 0 0 0 6px; }
   border-color: #ff6b6b;
   cursor: help;
 }
-.soccerdnp-starter {
-  color: var(--green);
-  border-color: var(--green);
-}
-.soccerdnp-sub-dnp {
-  color: #ff6b6b;
-  border-color: #ff6b6b;
-}
-
-/* ── Soccer DNP Checker — searchable match combobox ── */
-.soccerdnp-combobox {
-  position: relative;
-}
-.soccerdnp-dropdown-panel {
-  position: fixed;
-  z-index: 2000;
-  max-height: 260px;
-  overflow-y: auto;
-  background: var(--bg-card);
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(0,0,0,.35);
-}
-.soccerdnp-dropdown-item {
-  padding: 8px 12px;
-  font-size: .83rem;
-  color: var(--text-primary);
-  cursor: pointer;
-  border-bottom: 1px solid var(--border-input);
-}
-.soccerdnp-dropdown-item:last-child { border-bottom: none; }
-.soccerdnp-dropdown-item:hover,
-.soccerdnp-dropdown-item.is-active {
-  background: var(--bg-card-hover);
-  color: var(--purple-light);
-}
-.soccerdnp-dropdown-empty {
-  padding: 10px 12px;
-  font-size: .8rem;
-  color: var(--text-secondary);
-  text-align: center;
-}
 
 /* ── Gamebook Checker — Highlighted columns (FINAL, 1H, 2H, 1Q, 4Q) ── */
 .gamebook-table th.gamebook-col-highlight {
@@ -1074,6 +1042,18 @@ a.popover-btn { padding: 0 0 0 6px; }
   background: var(--purple-dim);
   font-weight: 500;
 }
+
+/* ── History page — expandable result rows ─────────────────── */
+.hist-result-row { cursor: pointer; }
+.hist-result-row:hover td { background: var(--bg-card-hover); }
+.hist-result-row .hist-chevron { transition: transform var(--transition); display: inline-block; }
+.hist-result-row.hist-expanded .hist-chevron { transform: rotate(90deg); }
+.hist-breakdown-row td { padding: 0; }
+.hist-breakdown-row textarea {
+  width: 100%; min-height: 140px; border: none; background: var(--bg-card);
+  color: var(--text-secondary); font-family: monospace; font-size: .8rem; padding: .75rem .9rem; resize: vertical;
+}
+.hist-delete-btn { padding: .3rem .55rem; }
 
 /* ── Reduced motion ──────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

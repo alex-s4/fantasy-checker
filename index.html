@@ -21,7 +21,7 @@
   <header>
     <nav class="main-nav">
       <div class="nav-inner">
-        <span class="main-brand-text"><span class="text-purple">Game</span><span class="text-green">Time</span> Platform 🐐</span>
+        <span class="main-brand-text"><span class="text-purple">Game</span><span class="text-green">Time</span> Platform</span>
         <div class="nav-links">
           <a href="./index.html" class="nav-item active">
             <i class="fa-solid fa-calculator"></i> FS Calculator
@@ -31,6 +31,9 @@
           </a>
           <a href="./toi-calc.html" class="nav-item">
             <i class="fa-solid fa-stopwatch"></i> Time Calculator
+          </a>
+          <a href="./history.html" class="nav-item">
+            <i class="fa-solid fa-clock-rotate-left"></i> History
           </a>
           <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">
             <i class="fa-solid fa-moon  icon-moon"></i>
@@ -55,7 +58,10 @@
       <div class="calc-card calc-card--full">
         <div class="card-header" id="head-bball">
           <img alt="NBA" src="https://static.prizepicks.com/images/leagues/production/1.svg" class="league-icon">
-          <h3>Basketball FS <span class="manual-bolt"><i class="fa-solid fa-bolt"></i></span></h3>
+          <h3>Basketball FS 
+            <span class="manual-bolt"><i class="fa-solid fa-bolt"></i></span>
+            <span class="manual-book"><i class="fa-solid fa-book-open"></i></span>
+          </h3>
           <i class="fa-solid fa-chevron-down collapse-icon"></i>
         </div>
 
@@ -90,6 +96,29 @@
             </div>
           </div>
 
+          <!-- Find-the-game lookup: identifies the game via ESPN and links directly
+               to the official statsdmz.nba.com Game Book PDF. This is a link only —
+               NOT an auto-fetch — the PDF host blocks direct browser fetch (CORS),
+               so the PDF still has to be saved and dropped into the box below by hand. -->
+          <p class="section-label" style="margin:.4rem 0 .5rem">— Find the Game Book by Date —</p>
+          <div class="fetch-row" style="gap:.5rem; flex-wrap:wrap">
+            <input type="date" id="bball-gb-lookup-date" class="stat-input" style="flex:1; min-width:150px">
+            <button id="bball-gb-lookup-load-btn" class="btn btn-primary">Load Games</button>
+          </div>
+          <p id="bball-gb-lookup-msg" class="fetch-msg"></p>
+          <div id="bball-gb-lookup-game-row" class="fetch-row" style="display:none; margin-top:.4rem">
+            <select id="bball-gb-lookup-game-select" class="stat-input" style="width:100%">
+              <option value="">Select a game…</option>
+            </select>
+          </div>
+          <div id="bball-gb-lookup-result" style="display:none; margin:.6rem 0 .8rem">
+            <p id="bball-gb-lookup-matchup" style="margin:.2rem 0 .6rem; font-weight:600"></p>
+            <div class="btn-row" style="margin-bottom:.4rem">
+              <a id="bball-gb-lookup-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary"><i class="fa-solid fa-file-pdf"></i> Open Game Book PDF</a>
+            </div>
+            <p class="manual-note">Link is a best-effort guess at the official filename — NBA can change this pattern without notice, so if it 404s, try <a href="https://www.nba.com/stats/gamebooks" target="_blank" rel="noopener noreferrer">NBA.com's official Game Books page</a> instead.</p>
+          </div>
+
           <div class="gamebook-dropzone" id="bball-gb-dropzone">
             <i class="fa-solid fa-file-pdf gamebook-dropzone-icon"></i>
             <p>Drop the Game Book PDF here, or click to browse</p>
@@ -117,6 +146,7 @@
             <textarea id="bball-gb-breakdown" class="breakdown-textarea" rows="9" readonly></textarea>
             <div class="breakdown-actions visible">
               <button id="bball-gb-breakdown-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="basketball" data-mode="Gamebook Upload" data-breakdown="#bball-gb-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -225,6 +255,7 @@
                 <input type="checkbox" id="bball-ps-hzs-checkbox"> Hide zero stats
               </label>
               <button id="bball-ps-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="basketball" data-mode="Player Search" data-breakdown="#bball-ps-breakdown" data-matchup="#bball-ps-matchup" data-date="#bball-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -301,6 +332,7 @@
                 <input type="checkbox" id="bball-ns-hzs-checkbox"> Hide zero stats
               </label>
               <button id="bball-ns-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="basketball" data-mode="Name Search" data-breakdown="#bball-ns-breakdown" data-matchup="#bball-ns-matchup" data-date="#bball-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -365,6 +397,7 @@
                 <input type="checkbox" id="bball-hzs-checkbox"> Hide zero stats
               </label>
               <button id="bball-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="basketball" data-mode="Manual" data-breakdown="#bball-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -448,6 +481,7 @@
             <textarea id="bsballp-ps-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
             <div class="breakdown-actions visible">
               <button id="bsballp-ps-breakdown-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="mlb-pitcher" data-mode="Player Search" data-breakdown="#bsballp-ps-breakdown" data-date="#bsballp-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -520,6 +554,7 @@
                 <input type="checkbox" id="bsballp-ns-hzs-checkbox"> Hide zero stats
               </label>
               <button id="bsballp-ns-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="mlb-pitcher" data-mode="Name Search" data-breakdown="#bsballp-ns-breakdown" data-matchup="#bsballp-ns-matchup" data-date="#bsballp-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -601,6 +636,7 @@
                 <input type="checkbox" id="bsballp-hzs-checkbox"> Hide zero stats
               </label>
               <button id="bsballp-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="mlb-pitcher" data-mode="Manual" data-breakdown="#bsballp-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -680,6 +716,7 @@
             <textarea id="bsballh-ps-breakdown" class="breakdown-textarea" rows="10" readonly></textarea>
             <div class="breakdown-actions visible">
               <button id="bsballh-ps-breakdown-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="mlb-hitter" data-mode="Player Search" data-breakdown="#bsballh-ps-breakdown" data-date="#bsballh-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -764,6 +801,7 @@
                 <input type="checkbox" id="bsballh-ns-hzs-checkbox"> Hide zero stats
               </label>
               <button id="bsballh-ns-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="mlb-hitter" data-mode="Name Search" data-breakdown="#bsballh-ns-breakdown" data-matchup="#bsballh-ns-matchup" data-date="#bsballh-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -842,6 +880,7 @@
                 <input type="checkbox" id="bsballh-hzs-checkbox"> Hide zero stats
               </label>
               <button id="bsballh-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="mlb-hitter" data-mode="Manual" data-breakdown="#bsballh-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -854,7 +893,8 @@
       <div class="calc-card calc-card--wide-plus">
         <div class="card-header" id="head-fballo">
           <img alt="NFL" src="https://static.prizepicks.com/images/leagues/production/30.svg" class="league-icon">
-          <h3>Football FS <span class="manual-bolt"><i class="fa-solid fa-bolt"></i></h3>
+          <h3>Football FS <span class="manual-bolt"><i class="fa-solid fa-bolt"></i></span>
+          <span class="manual-book"><i class="fa-solid fa-book-open"></i></span></h3>
           <i class="fa-solid fa-chevron-down collapse-icon"></i>
         </div>
 
@@ -883,8 +923,33 @@
           <div class="info-banner">
             <i class="fa-solid fa-circle-info"></i>
             <div>
-              Upload the official NFL Game Summary PDF to compute offensive fantasy scores for every player at once — Full Game, 1H, 1Q, 2H, 4Q (and OT / 2H+OT / 4Q+OT if the game went to overtime). 2-Pt Conversions, Offensive Fumble Recovery TD, and Kick/Punt/FG Return TD are auto-filled from the gamebook's Player Scoring Information table when present. 1Q/2Q/3Q/4Q come from reading the play-by-play directly; a value marked ⚠ means its quarter split didn't fully reconcile with the 1H/2H total (the Full Game/1H/2H numbers themselves are still correct) — click it for details.
+              Upload the official NFL Game Summary PDF to compute offensive fantasy scores for every player at once — Full Game, 1H, 2H (combined with OT, if any). 2-Pt Conversions, Offensive Fumble Recovery TD, and Kick/Punt/FG Return TD are auto-filled from the gamebook's Player Scoring Information table when present.
             </div>
+          </div>
+
+          <!-- Find-the-game lookup: unlike Basketball's, this can ONLY link to the
+               NFL.com recap page — the actual Game Book PDF lives at a random
+               Cloudinary URL that can only be discovered by reading that page,
+               and both a direct fetch AND three different CORS proxies were
+               tested and blocked. So this is a 2-step hop: open the recap page,
+               then click "Download Game Book (PDF)" there yourself. -->
+          <p class="section-label" style="margin:.4rem 0 .5rem">— Find the Game on NFL.com by Date —</p>
+          <div class="fetch-row" style="gap:.5rem; flex-wrap:wrap">
+            <input type="date" id="fballo-gb-lookup-date" class="stat-input" style="flex:1; min-width:150px">
+            <button id="fballo-gb-lookup-load-btn" class="btn btn-primary">Load Games</button>
+          </div>
+          <p id="fballo-gb-lookup-msg" class="fetch-msg"></p>
+          <div id="fballo-gb-lookup-game-row" class="fetch-row" style="display:none; margin-top:.4rem">
+            <select id="fballo-gb-lookup-game-select" class="stat-input" style="width:100%">
+              <option value="">Select a game…</option>
+            </select>
+          </div>
+          <div id="fballo-gb-lookup-result" style="display:none; margin:.6rem 0 .8rem">
+            <p id="fballo-gb-lookup-matchup" style="margin:.2rem 0 .6rem; font-weight:600"></p>
+            <div class="btn-row" style="margin-bottom:.4rem">
+              <a id="fballo-gb-lookup-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open NFL.com Recap Page</a>
+            </div>
+            <p class="manual-note">Once there, scroll to "Download Game Book (PDF)" and save it, then drop it into the box below. This link is a best-effort guess at NFL.com's page-naming pattern — if it 404s, try <a href="https://www.nfl.com/scores" target="_blank" rel="noopener noreferrer">NFL.com's Scores page</a> instead.</p>
           </div>
 
           <div class="gamebook-dropzone" id="fballo-gb-dropzone">
@@ -914,6 +979,7 @@
             <textarea id="fballo-gb-breakdown" class="breakdown-textarea" rows="20" readonly></textarea>
             <div class="breakdown-actions visible">
               <button id="fballo-gb-breakdown-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="nfl-offensive" data-mode="Gamebook Upload" data-breakdown="#fballo-gb-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -993,6 +1059,7 @@
                 <input type="checkbox" id="fballo-hzs-checkbox"> Hide zero stats
               </label>
               <button id="fballo-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="nfl-offensive" data-mode="Player Search" data-breakdown="#fballo-breakdown" data-matchup="#fballo-matchup" data-date="#fballo-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -1040,6 +1107,7 @@
                 <input type="checkbox" id="fballo-man-hzs-checkbox"> Hide zero stats
               </label>
               <button id="fballo-man-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="nfl-offensive" data-mode="Manual" data-breakdown="#fballo-man-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -1145,6 +1213,7 @@
             <textarea id="tennis-breakdown" class="breakdown-textarea" rows="9" readonly></textarea>
             <div id="tennis-textarea-btn-cont" class="breakdown-actions">
               <button id="tennis-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="tennis" data-mode="Manual" data-breakdown="#tennis-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -1212,6 +1281,7 @@
             <textarea id="mma-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
             <div id="mma-textarea-btn-cont" class="breakdown-actions">
               <button id="mma-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="mma" data-mode="Manual" data-breakdown="#mma-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
@@ -1276,6 +1346,7 @@
                 <input type="checkbox" id="box-hzs-checkbox"> Hide zero stats
               </label>
               <button id="box-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="boxing" data-mode="Manual" data-breakdown="#box-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
         </div>
