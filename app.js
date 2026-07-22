@@ -627,11 +627,17 @@ window.onload = function () {
     // project, but hasn't been exhaustively verified for every team/era —
     // and because of the CORS block above, there's no way to verify a
     // constructed URL resolves before a human actually clicks it.
+    // CONFIRMED FIX: Phoenix (both Suns and Mercury) uses "PHX" directly —
+    // Alex found this live via a real Mercury @ Sparks WNBA gamebook link;
+    // the companion project's ported table had PHX→PHO for both leagues,
+    // which was wrong. Removed for both NBA and WNBA (WNBA confirmed
+    // directly; NBA assumed to match since it's the same city/abbreviation
+    // convention, not separately verified).
     const ESPN_TO_NBA_TRICODE = {
-        NO: 'NOP', NY: 'NYK', GS: 'GSW', SA: 'SAS', UTAH: 'UTA', PHX: 'PHO', WSH: 'WAS',
+        NO: 'NOP', NY: 'NYK', GS: 'GSW', SA: 'SAS', UTAH: 'UTA', WSH: 'WAS',
     };
     const ESPN_TO_WNBA_TRICODE = {
-        LV: 'LVA', LA: 'LAS', NY: 'NYL', PHX: 'PHO', WSH: 'WAS',
+        LV: 'LVA', LA: 'LAS', NY: 'NYL', WSH: 'WAS',
     };
     function toNbaTricode(espnAbbr) {
         const up = (espnAbbr || '').toUpperCase();
