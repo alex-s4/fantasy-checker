@@ -1,0 +1,13 @@
+{
+  "name": "gametime-tests",
+  "version": "1.0.0",
+  "description": "Lightweight smoke tests for GameTime Platform — regression safety net for the planned app.js module split.",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}
