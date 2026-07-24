@@ -1032,6 +1032,11 @@ a.popover-btn { padding: 0 0 0 6px; }
   border-color: #ff6b6b;
   cursor: help;
 }
+.gamebook-cell-flagged {
+  color: #ff6b6b;
+  cursor: help;
+  font-size: 0.85em;
+}
 
 /* ── Gamebook Checker — Highlighted columns (FINAL, 1H, 2H, 1Q, 4Q) ── */
 .gamebook-table th.gamebook-col-highlight {
@@ -1054,6 +1059,46 @@ a.popover-btn { padding: 0 0 0 6px; }
   color: var(--text-secondary); font-family: monospace; font-size: .8rem; padding: .75rem .9rem; resize: vertical;
 }
 .hist-delete-btn { padding: .3rem .55rem; }
+
+/* ── Soccer DNP Checker — detached searchable-combobox panel ─────
+   Deliberately position:fixed and appended to <body> by JS, not a
+   normal child of the card — .calc-card/.card-body use overflow:hidden
+   for the collapse animation and rounded corners, which would otherwise
+   clip a dropdown that extends past the card's edge. */
+.soccerdnp-panel {
+  position: fixed;
+  z-index: 1000;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px -12px rgba(0,0,0,.45);
+}
+.soccerdnp-dropdown-item {
+  padding: .5rem .75rem;
+  font-size: .85rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.soccerdnp-dropdown-item:last-child { border-bottom: none; }
+.soccerdnp-dropdown-item:hover { background: var(--bg-card-hover); }
+.soccerdnp-dropdown-empty {
+  padding: .5rem .75rem;
+  font-size: .85rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.soccerdnp-starter {
+  color: var(--green);
+  background: var(--green-dim);
+  border-color: var(--green);
+}
+.soccerdnp-sub-dnp {
+  color: #ff6b6b;
+  background: rgba(255,107,107,.1);
+  border-color: #ff6b6b;
+}
 
 /* ── Reduced motion ──────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

@@ -141,6 +141,57 @@
         </div>
       </div>
 
+      <!-- ══════════════════════════════════════════════════
+           SOCCER DNP CHECKER
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card calc-card--full">
+        <div class="card-header" id="head-soccerdnp">
+          <img alt="Soccer" src="https://static.prizepicks.com/images/leagues/production/52.svg" class="league-icon">
+          <h3>Soccer DNP Checker</h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-soccerdnp">
+
+          <p class="manual-note" style="margin-bottom:1rem;">
+            <i class="fa-solid fa-circle-info"></i>
+            Pick a date and search for a match to see its lineup. <strong>Starter</strong> or
+            <strong>Sub/DNP</strong> is read directly from the official lineup — for matches
+            without a confirmed lineup yet, a predicted lineup is shown instead and clearly
+            labeled as such, never presented as fact.
+          </p>
+
+          <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date —</p>
+          <div class="fetch-row">
+            <input type="date" id="soccerdnp-date" class="stat-input stat-input--full">
+          </div>
+
+          <div class="fetch-row" style="width:100%">
+            <button id="soccerdnp-load-games-btn" type="button" class="btn btn-secondary btn-full">
+              <i class="fa-solid fa-list"></i> Load Games
+            </button>
+          </div>
+
+          <div class="fetch-row" id="soccerdnp-game-row" style="display:none; position:relative">
+            <input type="text" id="soccerdnp-game-search" class="stat-input stat-input--full" placeholder="Search matches…" autocomplete="off">
+            <div id="soccerdnp-game-panel" class="soccerdnp-panel" style="display:none"></div>
+          </div>
+
+          <p id="soccerdnp-fetch-msg" class="fetch-msg"></p>
+          <p id="soccerdnp-lineup-status" class="manual-note" style="display:none"></p>
+
+          <div class="round-pill-group" id="soccerdnp-team-tabs" style="display:none; margin:.6rem 0"></div>
+
+          <div id="soccerdnp-results-wrap" class="gamebook-table-wrap" style="display:none;">
+            <table class="gamebook-table">
+              <thead id="soccerdnp-results-head"></thead>
+              <tbody id="soccerdnp-results-body"></tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
     </div><!-- /sections-grid -->
   </main>
 
