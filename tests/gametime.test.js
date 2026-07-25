@@ -50,6 +50,7 @@ test('structure: every FS Calculator card and mode toggle is present', async () 
     const expectedHeaders = [
         '#head-bball', '#head-bsballp', '#head-bsballh',
         '#head-tennis', '#head-mma', '#head-box', '#head-fballo',
+        '#head-socout', '#head-socgk',
     ];
     expectedHeaders.forEach(sel => {
         assert.ok(document.querySelector(sel), `Missing card header: ${sel}`);
@@ -142,6 +143,98 @@ test('Tennis Manual: FS total computes correctly', async () => {
     // Sets Won: 2*3=6, Sets Lost: 0*-3=0, Aces: 2*0.5=1, Dbl Faults: 1*-0.5=-0.5
     // 10+12-7+6+0+1-0.5 = 21.5
     assert.equal(totalFs(document, 'tennis-total-fs'), 21.5);
+});
+
+// ── Tennis super tiebreak ──
+// Real match (Kovackova/Kovackova vs Dart/Lumsden, Prague Open 2026): the
+// deciding set was a super tiebreak, entered as 1-0 because a super tiebreak
+// counts as ONE GAME, not its raw point score (10-3 would wrongly add 10
+// games won). Before the fix, setComplete() required p>=6||o>=6, so the 1-0
+// set was skipped and its Set Won silently vanished — games tallied fine
+// (they're computed separately), giving 9.5 instead of 12.5.
+test('Tennis: super tiebreak deciding set (1-0) counts as a won set', async () => {
+    const { document } = await loadApp();
+    setValue(document, 'tennis-box-player-s1', 3);
+    setValue(document, 'tennis-box-opponent-s1', 6);
+    setValue(document, 'tennis-box-player-s2', 6);
+    setValue(document, 'tennis-box-opponent-s2', 3);
+    setValue(document, 'tennis-box-player-s3', 1);   // super tiebreak WON
+    setValue(document, 'tennis-box-opponent-s3', 0);
+    setValue(document, 'tennis-ac', 0);
+    setValue(document, 'tennis-dblft', 3);
+    click(document, 'tennis-btn');
+    // MP 10 + GW 10 - GL 9 + SW(2)*3=6 - SL(1)*3=3 + Ace 0 - DF 1.5 = 12.5
+    assert.equal(totalFs(document, 'tennis-total-fs'), 12.5);
+});
+
+test('Tennis: 1-0 in a NON-deciding set is still treated as incomplete', async () => {
+    const { document } = await loadApp();
+    setValue(document, 'tennis-box-player-s1', 1);
+    setValue(document, 'tennis-box-opponent-s1', 0);
+    setValue(document, 'tennis-ac', 0);
+    setValue(document, 'tennis-dblft', 3);
+    click(document, 'tennis-btn');
+    // Set 1 isn't deciding, so no set is counted: 10 + 1 - 0 + 0 - 0 - 1.5 = 9.5
+    assert.equal(totalFs(document, 'tennis-total-fs'), 9.5);
+});
+
+// ── Soccer Outfielder Manual ──
+// Note the confirmed scoring corrections vs the original roadmap spec:
+// Red Card is -2 (not -0.5), and Shot + Shot on Target are ADDITIVE, so
+// "Shot" is total shots including on-target ones.
+test('Soccer Outfielder Manual: FS total computes correctly', async () => {
+    const { document } = await loadApp();
+    setValue(document, 'socout-goal', 1);      // 1  * 10   =  10
+    setValue(document, 'socout-assist', 1);    // 1  * 5    =   5
+    setValue(document, 'socout-shot', 4);      // 4  * 1    =   4
+    setValue(document, 'socout-sot', 2);       // 2  * 1    =   2
+    setValue(document, 'socout-shotast', 3);   // 3  * 0.5  =   1.5
+    setValue(document, 'socout-pass', 60);     // 60 * 0.05 =   3
+    setValue(document, 'socout-clr', 2);       // 2  * 1    =   2
+    setValue(document, 'socout-tackle', 3);    // 3  * 1    =   3
+    setValue(document, 'socout-dribble', 5);   // 5  * 1    =   5
+    setValue(document, 'socout-cross', 4);     // 4  * 0.5  =   2
+    setValue(document, 'socout-yc', 1);        // 1  * -1   =  -1
+    setValue(document, 'socout-rc', 1);        // 1  * -2   =  -2
+    setValue(document, 'socout-foul', 2);      // 2  * -0.5 =  -1
+    click(document, 'socout-btn');
+    // 10+5+4+2+1.5+3+2+3+5+2-1-2-1 = 33.5
+    assert.equal(totalFs(document, 'socout-total-fs'), 33.5);
+});
+
+// ── Soccer Goalie Manual ──
+// Availability + shot-stopping only: Starting Score 5, Saves 2,
+// Goals Conceded -2, Clean Sheet 5.
+test('Soccer Goalie Manual: FS total computes correctly', async () => {
+    const { document } = await loadApp();
+    document.getElementById('socgk-start').checked = true;  // 1 * 5  =  5
+    setValue(document, 'socgk-saves', 4);                   // 4 * 2  =  8
+    setValue(document, 'socgk-ga', 1);                      // 1 * -2 = -2
+    // Clean Sheet left unchecked                           // 0 * 5  =  0
+    click(document, 'socgk-btn');
+    // 5 + 8 - 2 + 0 = 11
+    assert.equal(totalFs(document, 'socgk-total-fs'), 11);
+});
+
+test('Soccer Goalie: clean-sheet warning is advisory only, never changes the score', async () => {
+    const { document } = await loadApp();
+    const warning = document.getElementById('socgk-cs-warning');
+
+    // Contradiction: clean sheet ticked WITH goals conceded.
+    document.getElementById('socgk-start').checked = true;  //  5
+    setValue(document, 'socgk-saves', 3);                   //  6
+    setValue(document, 'socgk-ga', 2);                      // -4
+    document.getElementById('socgk-cs').checked = true;     //  5
+    click(document, 'socgk-btn');
+
+    assert.notEqual(warning.style.display, 'none', 'warning should be visible on contradiction');
+    // Crucially the score is still exactly what was entered: 5+6-4+5 = 12
+    assert.equal(totalFs(document, 'socgk-total-fs'), 12);
+
+    // Clearing the contradiction hides the warning again.
+    setValue(document, 'socgk-ga', 0);
+    document.getElementById('socgk-ga').dispatchEvent(new document.defaultView.Event('input'));
+    assert.equal(warning.style.display, 'none', 'warning should clear when no goals conceded');
 });
 
 // ── MLB Hitter Manual ──

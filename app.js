@@ -13,6 +13,7 @@ import { initTennis } from './tennis.js';
 import { initMma } from './mma.js';
 import { initBoxing } from './boxing.js';
 import { initNfl } from './nfl.js';
+import { initSoccer } from './soccer.js';
 
 window.onload = function () {
     // --------------------------------------------------------
@@ -42,6 +43,7 @@ window.onload = function () {
     initMma();
     initBoxing();
     initNfl();
+    initSoccer();
 
     // ========================================================
     //  NFL DST (currently hidden in the UI)

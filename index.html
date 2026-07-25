@@ -1352,6 +1352,187 @@
         </div>
       </div>
 
+      <!-- ══════════════════════════════════════════════════
+           SOCCER — OUTFIELDER
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card calc-card--wide">
+        <div class="card-header" id="head-socout">
+          <i class="fa-solid fa-futbol league-icon" style="color: white; font-size: 1.35rem"></i>
+          <h3>Soccer Outfielder FS
+            <span class="manual-bolt"><i class="fa-solid fa-bolt"></i></span>
+          </h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-socout">
+
+          <input type="text" id="socout-player-name" class="stat-input player-name-input" placeholder="Player name">
+
+          <table class="stat-table">
+            <tr>
+              <td>Goal Scored</td><td>10 pts</td>
+              <td><input type="number" id="socout-goal" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-goal-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Assist</td><td>5 pts</td>
+              <td><input type="number" id="socout-assist" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-assist-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shot</td><td>1 pt</td>
+              <td><input type="number" id="socout-shot" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-shot-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shot on Target</td><td>1 pt</td>
+              <td><input type="number" id="socout-sot" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-sot-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shots Assisted</td><td>0.5 pt</td>
+              <td><input type="number" id="socout-shotast" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-shotast-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Passes Attempted</td><td>0.05 pt</td>
+              <td><input type="number" id="socout-pass" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-pass-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Clearances</td><td>1 pt</td>
+              <td><input type="number" id="socout-clr" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-clr-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Tackles Attempted</td><td>1 pt</td>
+              <td><input type="number" id="socout-tackle" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-tackle-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Attempted Dribbles</td><td>1 pt</td>
+              <td><input type="number" id="socout-dribble" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-dribble-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Crosses</td><td>0.5 pt</td>
+              <td><input type="number" id="socout-cross" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-cross-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Yellow Cards</td><td>-1 pt</td>
+              <td><input type="number" id="socout-yc" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-yc-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Red Cards</td><td>-2 pts</td>
+              <td><input type="number" id="socout-rc" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-rc-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Fouls</td><td>-0.5 pt</td>
+              <td><input type="number" id="socout-foul" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-foul-val" class="socout-val"></span></td>
+            </tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="socout-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="socout-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="socout-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="socout-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="socout-textarea-btn-cont" class="breakdown-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="socout-hzs-checkbox"> Hide zero stats
+              </label>
+              <button id="socout-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="soccer-outfielder" data-mode="Manual" data-breakdown="#socout-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
+           SOCCER — GOALIE
+      ══════════════════════════════════════════════════ -->
+      <div class="calc-card calc-card--wide">
+        <div class="card-header" id="head-socgk">
+          <i class="fa-solid fa-hands league-icon" style="color: white; font-size: 1.35rem"></i>
+          <h3>Soccer Goalie FS
+            <span class="manual-bolt"><i class="fa-solid fa-bolt"></i></span>
+          </h3>
+          <i class="fa-solid fa-chevron-down collapse-icon"></i>
+        </div>
+
+        <div class="card-body" id="content-socgk">
+
+          <input type="text" id="socgk-player-name" class="stat-input player-name-input" placeholder="Player name">
+
+          <table class="stat-table">
+            <tr>
+              <td><label for="socgk-start">Starting Score</label></td><td>5 pts</td>
+              <td><input type="checkbox" id="socgk-start"></td>
+              <td><span id="socgk-start-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td>Saves</td><td>2 pts</td>
+              <td><input type="number" id="socgk-saves" class="stat-input socgk-fs" min="0"></td>
+              <td><span id="socgk-saves-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td>Goals Conceded</td><td>-2 pts</td>
+              <td><input type="number" id="socgk-ga" class="stat-input socgk-fs" min="0"></td>
+              <td><span id="socgk-ga-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td><label for="socgk-cs">Clean Sheet</label></td><td>5 pts</td>
+              <td><input type="checkbox" id="socgk-cs"></td>
+              <td><span id="socgk-cs-val" class="socgk-val"></span></td>
+            </tr>
+          </table>
+
+          <p id="socgk-cs-warning" class="fetch-msg fetch-msg--error" style="display:none"></p>
+
+          <p class="manual-note">
+            <i class="fa-solid fa-circle-info"></i>
+            <strong>Clean Sheet eligibility:</strong> the keeper must play past the 60-minute mark
+            without conceding. A keeper subbed off before 60 minutes is ineligible even if they
+            conceded nothing. Goals conceded by a substitute keeper don't affect the starter's
+            other stats, but they do remove the Clean Sheet.
+          </p>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="socgk-total-fs">—</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="socgk-btn"   class="btn btn-primary"><i class="fa-solid fa-bolt"></i> Go <kbd>↵</kbd></button>
+            <button id="socgk-clear" class="btn btn-ghost">Clear</button>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="socgk-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="socgk-textarea-btn-cont" class="breakdown-actions">
+              <label class="checkbox-row">
+                <input type="checkbox" id="socgk-hzs-checkbox"> Hide zero stats
+              </label>
+              <button id="socgk-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="soccer-goalie" data-mode="Manual" data-breakdown="#socgk-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- NFL DST — hidden (IDs kept for JS compatibility) -->
       <div class="hide">
         <div id="head-fballd"></div>

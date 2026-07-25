@@ -51,6 +51,8 @@ window.onload = function () {
         mma: 'MMA',
         boxing: 'Boxing',
         'nfl-offensive': 'NFL Offensive',
+        'soccer-outfielder': 'Soccer Outfielder',
+        'soccer-goalie': 'Soccer Goalie',
     };
 
     function historyLoad() {
