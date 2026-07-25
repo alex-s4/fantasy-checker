@@ -526,23 +526,45 @@ export function initBasketball() {
     // board (not just for one team), that's the likely cause — worth
     // periodically re-confirming the pattern against a fresh real PDF.
     //
-    // ESPN's team abbreviations also don't always match NBA's own tricodes
-    // used in the filename (e.g. ESPN "NY" vs NBA "NYK" for the Knicks). The
-    // table below is the best-known mapping, ported from the companion
-    // project, but hasn't been exhaustively verified for every team/era —
-    // and because of the CORS block above, there's no way to verify a
-    // constructed URL resolves before a human actually clicks it.
-    // CONFIRMED FIX: Phoenix (both Suns and Mercury) uses "PHX" directly —
-    // Alex found this live via a real Mercury @ Sparks WNBA gamebook link;
-    // the companion project's ported table had PHX→PHO for both leagues,
-    // which was wrong. Removed for both NBA and WNBA (WNBA confirmed
-    // directly; NBA assumed to match since it's the same city/abbreviation
-    // convention, not separately verified).
+    // ESPN's team abbreviations don't always match the tricode used in the
+    // gamebook PDF filename (e.g. ESPN "NY" vs "NYK" for the Knicks). Only
+    // the genuine mismatches are listed; anything absent passes through
+    // unchanged. Because of the CORS block above, a constructed URL can't be
+    // verified before a human clicks it — so these are checked by hand.
+    //
+    // AUDITED against Alex's full ESPN-vs-official reference sheet
+    // (ABBRREV.xlsx, NBA + WNBA tabs). NBA matched exactly, all 30 teams,
+    // no changes needed. WNBA was missing Golden State Valkyries (GS→GSV,
+    // an expansion team) — added.
+    //
+    // Portland Fire (POR→PDX) added separately: the 2026 expansion team
+    // isn't in that sheet at all. ESPN uses "POR" (their team URL is
+    // /wnba/team/_/name/por/portland-fire and their matchup pages render
+    // "Fire POR"); the league side uses "PDX" (per Alex, and it's prominent
+    // enough that it confused fans on a June 2026 broadcast). NOT yet
+    // verified two ways though: (a) ESPN's *API* `team.abbreviation` field —
+    // which is what this code actually reads — was inferred from ESPN's web
+    // URLs, not read from the API directly, and (b) no real Portland
+    // gamebook link has been clicked to confirm the PDF filename actually
+    // uses PDX. Worth testing on a real Fire game.
+    //
+    // STILL MISSING: Toronto Tempo, the other 2026 expansion team — also
+    // absent from the sheet, and no abbreviation data gathered yet.
+    //
+    // DELIBERATE DIVERGENCE FROM THAT SHEET — do not "fix" this back:
+    // the sheet lists WNBA Phoenix Mercury as PHX→PHO, but Alex confirmed
+    // live against a real Mercury @ Sparks gamebook link that the PDF
+    // filename uses PHX. Best explanation: the sheet's column is WNBA.com's
+    // *display* abbreviation, which is a different system from the
+    // statsdmz.nba.com filename convention this table actually feeds — they
+    // usually agree, but not here. Phoenix therefore passes through as PHX
+    // for both leagues (WNBA confirmed directly; NBA never had a confirmed
+    // counter-example either).
     const ESPN_TO_NBA_TRICODE = {
         NO: 'NOP', NY: 'NYK', GS: 'GSW', SA: 'SAS', UTAH: 'UTA', WSH: 'WAS',
     };
     const ESPN_TO_WNBA_TRICODE = {
-        LV: 'LVA', LA: 'LAS', NY: 'NYL', WSH: 'WAS',
+        GS: 'GSV', LV: 'LVA', LA: 'LAS', NY: 'NYL', POR: 'PDX', WSH: 'WAS',
     };
     function toNbaTricode(espnAbbr) {
         const up = (espnAbbr || '').toUpperCase();
