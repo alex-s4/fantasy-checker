@@ -788,6 +788,11 @@ kbd {
   text-align: center;
   align-self: center;
 }
+/* Score boxes are a fixed 40px inside stretchy 1fr columns, so without this
+   they'd sit at the LEFT edge of each column while their S1/S2/S3 label is
+   centered — barely noticeable in BO5 (5 narrow columns), clearly misaligned
+   in BO3 (3 much wider columns). Centering the box matches the label. */
+.tennis-grid .tennis-score-input { justify-self: center; }
 
 /* ── FCB radio table (MMA / Boxing) ─────────────────────── */
 .fcb-table {

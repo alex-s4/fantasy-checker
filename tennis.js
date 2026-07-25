@@ -58,8 +58,27 @@ export function initTennis() {
         const retirementChecked = oppRetired || playerRetired;
         const format    = Number(document.querySelector('input[name="tennis-format"]:checked')?.value || 3);
         const setsToWin = Math.ceil(format / 2); // 2 for BO3, 3 for BO5
-        /** True if a set score pair represents a completed set. */
-        function setComplete(p, o) { return p >= 6 || o >= 6; }
+        const decidingSetIdx = format - 1; // set 3 in BO3, set 5 in BO5
+        /**
+         * True if a set score pair represents a completed set.
+         *
+         * SUPER TIEBREAK: when the match is decided by a super tiebreak (a
+         * first-to-10 game played in place of a full deciding set), that set
+         * is entered as 1-0 / 0-1 — because per the scoring rules a super
+         * tiebreak counts as ONE GAME, not as its raw point score. A plain
+         * `p >= 6 || o >= 6` check would treat 1-0 as an unfinished set and
+         * silently drop the set win (the games tally is computed separately,
+         * so games came through fine while Set Won quietly went missing).
+         *
+         * Deliberately scoped to the DECIDING set only: a 1-0 in any earlier
+         * set is still an in-progress set, which is the safer reading.
+         * Note the raw score (e.g. 10-3) must NOT be entered — that would
+         * count 10 tiebreak POINTS as 10 games won.
+         */
+        function setComplete(p, o, setIdx) {
+            if (setIdx === decidingSetIdx && ((p === 1 && o === 0) || (p === 0 && o === 1))) return true;
+            return p >= 6 || o >= 6;
+        }
         /** 6 normally; 7 if the in-progress set is already at 5-5 or beyond. */
         function winningScore(w, l) { return (w >= 5 && l >= 5) ? 7 : 6; }
         /**
@@ -67,11 +86,11 @@ export function initTennis() {
          * winnerScores / loserScores are the raw arrays, mutated in place.
          */
         function applyRetirement(winnerScores, loserScores) {
-            if (!setComplete(winnerScores[0], loserScores[0])) return; // Set 1 must be done
+            if (!setComplete(winnerScores[0], loserScores[0], 0)) return; // Set 1 must be done
             // Step 1 — find and fill the first incomplete set
             let retiredAtSet = -1;
             for (let i = 0; i < format; i++) {
-                if (!setComplete(winnerScores[i], loserScores[i])) { retiredAtSet = i; break; }
+                if (!setComplete(winnerScores[i], loserScores[i], i)) { retiredAtSet = i; break; }
             }
             if (retiredAtSet !== -1) {
                 winnerScores[retiredAtSet] = winningScore(winnerScores[retiredAtSet], loserScores[retiredAtSet]);
@@ -79,7 +98,7 @@ export function initTennis() {
             // Step 2 — count winner's set wins after that fill
             let winnerSetWins = 0;
             for (let i = 0; i < format; i++) {
-                if (setComplete(winnerScores[i], loserScores[i]) && winnerScores[i] > loserScores[i]) winnerSetWins++;
+                if (setComplete(winnerScores[i], loserScores[i], i) && winnerScores[i] > loserScores[i]) winnerSetWins++;
             }
             // Step 3 — fill 6-0 until winner reaches setsToWin; zero the rest
             const startFrom = retiredAtSet === -1 ? format : retiredAtSet + 1;
@@ -106,7 +125,7 @@ export function initTennis() {
         // ── Tally sets won / lost ─────────────────────────────────────
         let setsWon = 0, setsLost = 0;
         for (let i = 0; i < format; i++) {
-            if (!setComplete(pScores[i], oScores[i])) continue;
+            if (!setComplete(pScores[i], oScores[i], i)) continue;
             if      (pScores[i] > oScores[i]) setsWon++;
             else if (pScores[i] < oScores[i]) setsLost++;
         }
@@ -138,7 +157,7 @@ export function initTennis() {
         ];
         const tennisHeader = buildHeader(document.getElementById('tennis-player-name').value);
         // DNP: retirement checked but Set 1 not complete → show DNP only
-        const isDNP = retirementChecked && !setComplete(pScores[0], oScores[0]);
+        const isDNP = retirementChecked && !setComplete(pScores[0], oScores[0], 0);
         if (isDNP) {
             const dnpText = withHeader(tennisHeader, 'BOBO');
             showBreakdown('#tennis-breakdown', '#tennis-textarea-btn-cont', dnpText);
