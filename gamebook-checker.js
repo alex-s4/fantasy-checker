@@ -605,9 +605,37 @@ window.onload = function () {
     // Sofascore's Sec-Fetch-Site rejection) so it's routed through
     // corsproxy.io. TEMPORARY per Alex — revisit if this proves unreliable,
     // same as the earlier Sofascore proxy attempt.
+    // MIGRATED off the public corsproxy.io onto Alex's own Cloudflare Worker
+    // (same deployment as the NFL gamebook proxy; Fotmob lives under
+    // /fotmob/<endpoint>). The Worker fetches Fotmob server-side, where CORS
+    // doesn't apply, and passes the JSON straight back unchanged.
+    //
+    // corsproxy.io is KEPT as a last-resort fallback rather than deleted, so
+    // this migration can never be a regression: if the Worker is down, not yet
+    // redeployed, or blocked by Fotmob's token-signed-request path, the old
+    // behaviour still applies. Remove the fallback once the Worker is proven.
+    const FOTMOB_WORKER = 'https://gametime-nfl-gamebook-proxy.alex-s4.workers.dev/fotmob';
     const CORS_PROXY = 'https://corsproxy.io/?url=';
-    function fotmobDetailsFetch(url) {
-        return fetch(CORS_PROXY + encodeURIComponent(url));
+
+    /** matchDetails via the Worker, falling back to the public proxy. */
+    async function fotmobDetailsFetch(matchId) {
+        try {
+            const res = await fetch(`${FOTMOB_WORKER}/matchDetails?matchId=${encodeURIComponent(matchId)}`);
+            if (res.ok) return res;
+        } catch { /* Worker unreachable — fall through to the public proxy */ }
+        return fetch(CORS_PROXY + encodeURIComponent(`${FOTMOB_API}/matchDetails?matchId=${matchId}`));
+    }
+
+    /** matches?date= is CORS-open and fetched DIRECTLY (no proxy needed, and
+     *  no reason to add a hop). The Worker is only a fallback here, in case
+     *  Fotmob ever drops that CORS header the way it never set one on
+     *  matchDetails. */
+    async function fotmobMatchesFetch(dateParam) {
+        try {
+            const res = await fetch(`${FOTMOB_API}/matches?date=${dateParam}`);
+            if (res.ok) return res;
+        } catch { /* fall through to the Worker */ }
+        return fetch(`${FOTMOB_WORKER}/matches?date=${encodeURIComponent(dateParam)}`);
     }
 
     const soccerdnpHeaderEl      = document.querySelector('#head-soccerdnp');
@@ -748,7 +776,7 @@ window.onload = function () {
         setSoccerDnpMsg('Loading matches…', 'loading');
 
         try {
-            const res = await fetch(`${FOTMOB_API}/matches?date=${dateParam}`);
+            const res = await fotmobMatchesFetch(dateParam);
             if (!res.ok) throw new Error('matches request failed');
             const data = await res.json();
             const leagues = data.leagues || [];
@@ -793,7 +821,7 @@ window.onload = function () {
 
         setSoccerDnpMsg('Loading lineups…', 'loading');
         try {
-            const res = await fotmobDetailsFetch(`${FOTMOB_API}/matchDetails?matchId=${matchId}`);
+            const res = await fotmobDetailsFetch(matchId);
             // Stale-response guard: the proxy adds unpredictable latency, so if
             // the user has since picked a different match, this response is
             // outdated — drop it instead of overwriting the newer selection's

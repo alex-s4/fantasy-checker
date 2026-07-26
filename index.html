@@ -1366,6 +1366,229 @@
 
         <div class="card-body" id="content-socout">
 
+        <!-- Mode toggle -->
+        <div class="mode-toggle">
+          <label class="mode-btn">
+            <input type="radio" name="socout-mode" id="socout-mode-name" class="socout-mode-radio">
+            <i class="fa-solid fa-magnifying-glass"></i> Name Search
+          </label>
+          <label class="mode-btn">
+            <input type="radio" name="socout-mode" id="socout-mode-search" class="socout-mode-radio">
+            <i class="fa-solid fa-list"></i> Match Search
+          </label>
+          <label class="mode-btn">
+            <input type="radio" name="socout-mode" id="socout-mode-manual" class="socout-mode-radio" checked>
+            <i class="fa-solid fa-keyboard"></i> Manual
+          </label>
+        </div>
+
+        <!-- ── Name Search mode ── -->
+        <div id="socout-name-mode" style="display:none">
+          <p class="section-label" style="text-align:center; margin:.6rem 0;">— Search Player —</p>
+          <div class="fetch-row" style="position:relative">
+            <input type="text" id="socout-ns-name-search" class="stat-input stat-input--full" placeholder="Search player name…" autocomplete="off">
+            <div id="socout-ns-name-panel" class="soccerdnp-panel" style="display:none"></div>
+          </div>
+          <p id="socout-ns-name-msg" class="fetch-msg"></p>
+
+          <div class="fetch-row" id="socout-ns-match-row" style="display:none; position:relative">
+            <input type="text" id="socout-ns-match-search" class="stat-input stat-input--full" placeholder="Search recent matches…" autocomplete="off">
+            <div id="socout-ns-match-panel" class="soccerdnp-panel" style="display:none"></div>
+          </div>
+          <p id="socout-ns-fetch-msg" class="fetch-msg"></p>
+          <p id="socout-ns-matchup" class="matchup-line"></p>
+
+          <table class="stat-table hide">
+            <tr>
+              <td>Goal Scored</td><td>10 pts</td>
+              <td><input type="number" id="socout-ns-goal" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-goal-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Assist</td><td>5 pts</td>
+              <td><input type="number" id="socout-ns-assist" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-assist-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shot</td><td>1 pt</td>
+              <td><input type="number" id="socout-ns-shot" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-shot-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shot on Target</td><td>1 pt</td>
+              <td><input type="number" id="socout-ns-sot" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-sot-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shots Assisted</td><td>0.5 pt</td>
+              <td><input type="number" id="socout-ns-shotast" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-shotast-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Passes Attempted</td><td>0.05 pt</td>
+              <td><input type="number" id="socout-ns-pass" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-pass-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Clearances</td><td>1 pt</td>
+              <td><input type="number" id="socout-ns-clr" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-clr-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Tackles Attempted</td><td>1 pt</td>
+              <td><input type="number" id="socout-ns-tackle" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-tackle-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Attempted Dribbles</td><td>1 pt</td>
+              <td><input type="number" id="socout-ns-dribble" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-dribble-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Crosses</td><td>0.5 pt</td>
+              <td><input type="number" id="socout-ns-cross" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-cross-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Yellow Cards</td><td>-1 pt</td>
+              <td><input type="number" id="socout-ns-yc" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-yc-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Red Cards</td><td>-2 pts</td>
+              <td><input type="number" id="socout-ns-rc" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-rc-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Fouls</td><td>-0.5 pt</td>
+              <td><input type="number" id="socout-ns-foul" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ns-foul-val" class="socout-val"></span></td>
+            </tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="socout-ns-total-fs">—</span>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="socout-ns-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="socout-ns-textarea-btn-cont" class="breakdown-actions">
+              <button id="socout-ns-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="soccer-outfielder" data-mode="Name Search" data-breakdown="#socout-ns-breakdown" data-matchup="#socout-ns-matchup"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Player Search mode ── -->
+        <div id="socout-search-mode" style="display:none">
+          <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date —</p>
+          <div class="fetch-row">
+            <input type="date" id="socout-ps-date" class="stat-input stat-input--full">
+          </div>
+          <div class="fetch-row" style="width:100%">
+            <button id="socout-ps-load-games-btn" type="button" class="btn btn-secondary btn-full">
+              <i class="fa-solid fa-list"></i> Load Matches
+            </button>
+          </div>
+          <div class="fetch-row" id="socout-ps-game-row" style="display:none; position:relative">
+            <input type="text" id="socout-ps-game-search" class="stat-input stat-input--full" placeholder="Search matches…" autocomplete="off">
+            <div id="socout-ps-game-panel" class="soccerdnp-panel" style="display:none"></div>
+          </div>
+          <p id="socout-ps-fetch-msg" class="fetch-msg"></p>
+          <p id="socout-ps-lineup-status" class="manual-note" style="display:none"></p>
+          <div class="round-pill-group" id="socout-ps-team-tabs" style="display:none; margin:.6rem 0"></div>
+          <div class="fetch-row" id="socout-ps-player-row" style="display:none">
+            <select id="socout-ps-player-select" class="stat-input stat-input--full"></select>
+          </div>
+          <p id="socout-ps-matchup" class="matchup-line"></p>
+
+          <table class="stat-table hide">
+            <tr>
+              <td>Goal Scored</td><td>10 pts</td>
+              <td><input type="number" id="socout-ps-goal" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-goal-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Assist</td><td>5 pts</td>
+              <td><input type="number" id="socout-ps-assist" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-assist-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shot</td><td>1 pt</td>
+              <td><input type="number" id="socout-ps-shot" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-shot-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shot on Target</td><td>1 pt</td>
+              <td><input type="number" id="socout-ps-sot" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-sot-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Shots Assisted</td><td>0.5 pt</td>
+              <td><input type="number" id="socout-ps-shotast" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-shotast-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Passes Attempted</td><td>0.05 pt</td>
+              <td><input type="number" id="socout-ps-pass" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-pass-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Clearances</td><td>1 pt</td>
+              <td><input type="number" id="socout-ps-clr" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-clr-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Tackles Attempted</td><td>1 pt</td>
+              <td><input type="number" id="socout-ps-tackle" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-tackle-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Attempted Dribbles</td><td>1 pt</td>
+              <td><input type="number" id="socout-ps-dribble" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-dribble-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Crosses</td><td>0.5 pt</td>
+              <td><input type="number" id="socout-ps-cross" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-cross-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Yellow Cards</td><td>-1 pt</td>
+              <td><input type="number" id="socout-ps-yc" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-yc-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Red Cards</td><td>-2 pts</td>
+              <td><input type="number" id="socout-ps-rc" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-rc-val" class="socout-val"></span></td>
+            </tr>
+            <tr>
+              <td>Fouls</td><td>-0.5 pt</td>
+              <td><input type="number" id="socout-ps-foul" class="stat-input socout-fs" min="0"></td>
+              <td><span id="socout-ps-foul-val" class="socout-val"></span></td>
+            </tr>
+          </table>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="socout-ps-total-fs">—</span>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="socout-ps-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="socout-ps-textarea-btn-cont" class="breakdown-actions">
+              <button id="socout-ps-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="soccer-outfielder" data-mode="Match Search" data-breakdown="#socout-ps-breakdown" data-matchup="#socout-ps-matchup" data-date="#socout-ps-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Manual mode ── -->
+        <div id="socout-manual-mode">
           <input type="text" id="socout-player-name" class="stat-input player-name-input" placeholder="Player name">
 
           <table class="stat-table">
@@ -1457,6 +1680,7 @@
               <button class="btn btn-secondary history-save-btn" data-sport="soccer-outfielder" data-mode="Manual" data-breakdown="#socout-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
+        </div><!-- /socout-manual-mode -->
         </div>
       </div>
 
@@ -1474,6 +1698,141 @@
 
         <div class="card-body" id="content-socgk">
 
+        <!-- Mode toggle -->
+        <div class="mode-toggle">
+          <label class="mode-btn">
+            <input type="radio" name="socgk-mode" id="socgk-mode-name" class="socgk-mode-radio">
+            <i class="fa-solid fa-magnifying-glass"></i> Name Search
+          </label>
+          <label class="mode-btn">
+            <input type="radio" name="socgk-mode" id="socgk-mode-search" class="socgk-mode-radio">
+            <i class="fa-solid fa-list"></i> Match Search
+          </label>
+          <label class="mode-btn">
+            <input type="radio" name="socgk-mode" id="socgk-mode-manual" class="socgk-mode-radio" checked>
+            <i class="fa-solid fa-keyboard"></i> Manual
+          </label>
+        </div>
+
+        <!-- ── Name Search mode ── -->
+        <div id="socgk-name-mode" style="display:none">
+          <p class="section-label" style="text-align:center; margin:.6rem 0;">— Search Player —</p>
+          <div class="fetch-row" style="position:relative">
+            <input type="text" id="socgk-ns-name-search" class="stat-input stat-input--full" placeholder="Search player name…" autocomplete="off">
+            <div id="socgk-ns-name-panel" class="soccerdnp-panel" style="display:none"></div>
+          </div>
+          <p id="socgk-ns-name-msg" class="fetch-msg"></p>
+
+          <div class="fetch-row" id="socgk-ns-match-row" style="display:none; position:relative">
+            <input type="text" id="socgk-ns-match-search" class="stat-input stat-input--full" placeholder="Search recent matches…" autocomplete="off">
+            <div id="socgk-ns-match-panel" class="soccerdnp-panel" style="display:none"></div>
+          </div>
+          <p id="socgk-ns-fetch-msg" class="fetch-msg"></p>
+          <p id="socgk-ns-matchup" class="matchup-line"></p>
+
+          <table class="stat-table hide">
+            <tr>
+              <td><label for="socgk-ns-start">Starting Score</label></td><td>5 pts</td>
+              <td><input type="checkbox" id="socgk-ns-start"></td>
+              <td><span id="socgk-ns-start-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td>Saves</td><td>2 pts</td>
+              <td><input type="number" id="socgk-ns-saves" class="stat-input socgk-fs" min="0"></td>
+              <td><span id="socgk-ns-saves-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td>Goals Conceded</td><td>-2 pts</td>
+              <td><input type="number" id="socgk-ns-ga" class="stat-input socgk-fs" min="0"></td>
+              <td><span id="socgk-ns-ga-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td><label for="socgk-ns-cs">Clean Sheet</label></td><td>5 pts</td>
+              <td><input type="checkbox" id="socgk-ns-cs"></td>
+              <td><span id="socgk-ns-cs-val" class="socgk-val"></span></td>
+            </tr>
+          </table>
+          <p id="socgk-ns-cs-note" class="manual-note" style="display:none"></p>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="socgk-ns-total-fs">—</span>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="socgk-ns-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="socgk-ns-textarea-btn-cont" class="breakdown-actions">
+              <button id="socgk-ns-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="soccer-goalie" data-mode="Name Search" data-breakdown="#socgk-ns-breakdown" data-matchup="#socgk-ns-matchup"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Player Search mode ── -->
+        <div id="socgk-search-mode" style="display:none">
+          <p class="section-label" style="text-align:center; margin:.6rem 0;">— Select Date —</p>
+          <div class="fetch-row">
+            <input type="date" id="socgk-ps-date" class="stat-input stat-input--full">
+          </div>
+          <div class="fetch-row" style="width:100%">
+            <button id="socgk-ps-load-games-btn" type="button" class="btn btn-secondary btn-full">
+              <i class="fa-solid fa-list"></i> Load Matches
+            </button>
+          </div>
+          <div class="fetch-row" id="socgk-ps-game-row" style="display:none; position:relative">
+            <input type="text" id="socgk-ps-game-search" class="stat-input stat-input--full" placeholder="Search matches…" autocomplete="off">
+            <div id="socgk-ps-game-panel" class="soccerdnp-panel" style="display:none"></div>
+          </div>
+          <p id="socgk-ps-fetch-msg" class="fetch-msg"></p>
+          <p id="socgk-ps-lineup-status" class="manual-note" style="display:none"></p>
+          <div class="round-pill-group" id="socgk-ps-team-tabs" style="display:none; margin:.6rem 0"></div>
+          <div class="fetch-row" id="socgk-ps-player-row" style="display:none">
+            <select id="socgk-ps-player-select" class="stat-input stat-input--full"></select>
+          </div>
+          <p id="socgk-ps-matchup" class="matchup-line"></p>
+
+          <table class="stat-table hide">
+            <tr>
+              <td><label for="socgk-ps-start">Starting Score</label></td><td>5 pts</td>
+              <td><input type="checkbox" id="socgk-ps-start"></td>
+              <td><span id="socgk-ps-start-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td>Saves</td><td>2 pts</td>
+              <td><input type="number" id="socgk-ps-saves" class="stat-input socgk-fs" min="0"></td>
+              <td><span id="socgk-ps-saves-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td>Goals Conceded</td><td>-2 pts</td>
+              <td><input type="number" id="socgk-ps-ga" class="stat-input socgk-fs" min="0"></td>
+              <td><span id="socgk-ps-ga-val" class="socgk-val"></span></td>
+            </tr>
+            <tr>
+              <td><label for="socgk-ps-cs">Clean Sheet</label></td><td>5 pts</td>
+              <td><input type="checkbox" id="socgk-ps-cs"></td>
+              <td><span id="socgk-ps-cs-val" class="socgk-val"></span></td>
+            </tr>
+          </table>
+          <p id="socgk-ps-cs-note" class="manual-note" style="display:none"></p>
+
+          <hr class="divider">
+          <div class="total-row">
+            <span class="total-label">Total FS</span>
+            <span class="total-value" id="socgk-ps-total-fs">—</span>
+          </div>
+
+          <div class="breakdown-area">
+            <textarea id="socgk-ps-breakdown" class="breakdown-textarea" rows="7" readonly></textarea>
+            <div id="socgk-ps-textarea-btn-cont" class="breakdown-actions">
+              <button id="socgk-ps-copy" class="btn btn-secondary"><i class="fa-solid fa-copy"></i> Copy</button>
+              <button class="btn btn-secondary history-save-btn" data-sport="soccer-goalie" data-mode="Match Search" data-breakdown="#socgk-ps-breakdown" data-matchup="#socgk-ps-matchup" data-date="#socgk-ps-date"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Manual mode ── -->
+        <div id="socgk-manual-mode">
           <input type="text" id="socgk-player-name" class="stat-input player-name-input" placeholder="Player name">
 
           <table class="stat-table">
@@ -1530,6 +1889,7 @@
               <button class="btn btn-secondary history-save-btn" data-sport="soccer-goalie" data-mode="Manual" data-breakdown="#socgk-breakdown"><i class="fa-solid fa-floppy-disk"></i> Save</button>
             </div>
           </div>
+        </div><!-- /socgk-manual-mode -->
         </div>
       </div>
 
